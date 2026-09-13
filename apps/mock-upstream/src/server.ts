@@ -87,6 +87,14 @@ const KNOWN: Record<string, KnownRecord> = {
       "No. 42, 3rd Cross, Peenya Industrial Area, Bengaluru 560058",
     filings_annual_turnover_inr: 10_200_000,
   },
+  "27AAJCS8264N1ZK": {
+    status: "ACTIVE",
+    legal_name: "Shivneri Consumer Distributors Private Limited",
+    incorporation_date: "2017-03-14",
+    registered_address:
+      "Unit 12, Sahyadri Trade Centre, Market Yard Road, Gultekdi, Pune 411037",
+    filings_annual_turnover_inr: 62_400_000,
+  },
 };
 
 const DAY_MS = 86_400_000;
