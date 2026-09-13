@@ -94,9 +94,10 @@ curl -s 'localhost:3000/v1/applications?limit=100' \
 
 ### 4. Every Appendix A variant, under both policies
 
-The five fixtures are loadable from the UI's submit panel, and live in
-`packages/core/src/fixtures.ts`. Submit each under both API keys and check the cited clause
-text against the policy YAML in `packages/core/src/policies/`.
+The five fixtures are in the console's **Scenario** dropdown, grouped as baseline, adversarial
+and edge case, and each option shows the outcome to expect for the selected customer. They
+live in `packages/core/src/fixtures.ts`. Submit each under both customers and check the cited
+clause text against the policy YAML in `packages/core/src/policies/`.
 
 For deterministic output, turn the chaos off first (see §7 below).
 

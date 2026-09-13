@@ -1,564 +1,419 @@
 import * as React from "react";
-import {
-  AlertTriangle,
-  ChevronRight,
-  FileSearch,
-  MousePointerClick,
-  ShieldAlert,
-  Siren,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Spinner } from "@/components/ui/spinner";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  ClauseOutcomeBadge,
-  ResultBadge,
-  StatusBadge,
-  UpstreamOutcomeBadge,
-} from "@/components/ui/status";
-import { ApiError, getApplication, type ApplicationDetail } from "@/api";
-import { cn, formatTs } from "@/lib/utils";
+import { ShieldAlert, TriangleAlert, WifiOff } from "lucide-react";
+import { CopyButton } from "@/components/ui/copy-button";
+import { ResultGlyph, StatusGlyph } from "@/components/ui/status";
+import { Tabs, TabPanel } from "@/components/ui/tabs";
+import { ApiError, getApplication, type ApplicationDetail, type Reason } from "@/api";
+import { customerByKey, customerByPolicy } from "@/fixtures";
+import { CLAUSE_OUTCOME_LABEL, STATUS_LABEL, label } from "@/lib/labels";
+import { cn, durationBetween, formatMs, formatTs, shortId, useNow } from "@/lib/utils";
+import { CallsPanel } from "./decision/CallsPanel";
+import { ClausesPanel } from "./decision/ClausesPanel";
+import { EvidencePanel } from "./decision/EvidencePanel";
+import { PolicyPanel } from "./decision/PolicyPanel";
+import { Banner, Collapsible, Quote, decidingClauses, realQuote } from "./decision/shared";
 
 const POLL_MS = 2000;
+const MAX_BACKOFF_MS = 10_000;
 
-export interface DecisionViewProps {
+type TabId = "clauses" | "evidence" | "calls" | "policy";
+
+export function DecisionView({
+  apiKey,
+  applicationId,
+  onTerminal,
+}: {
   apiKey: string;
   applicationId: string | null;
   onTerminal?: (id: string) => void;
-}
-
-export function DecisionView({ apiKey, applicationId, onTerminal }: DecisionViewProps) {
+}) {
   const [detail, setDetail] = React.useState<ApplicationDetail | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
-  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<{ message: string; notFound: boolean } | null>(null);
+  const [tab, setTab] = React.useState<TabId>("clauses");
+  const [announcement, setAnnouncement] = React.useState("");
 
   const terminalRef = React.useRef(onTerminal);
   terminalRef.current = onTerminal;
 
   React.useEffect(() => {
-    if (!applicationId) {
-      setDetail(null);
-      setError(null);
-      return;
-    }
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    setDetail(null);
+    setError(null);
+    setTab("clauses");
+    setAnnouncement("");
+    if (!applicationId) return;
 
-    async function tick(first: boolean) {
-      if (cancelled || !applicationId) return;
-      if (first) setLoading(true);
+    let cancelled = false;
+    let previousStatus: string | null = null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let failures = 0;
+
+    async function tick() {
       try {
-        const d = await getApplication(apiKey, applicationId);
+        const d = await getApplication(apiKey, applicationId!);
         if (cancelled) return;
+        failures = 0;
         setDetail(d);
         setError(null);
-        if (d.status === "PROCESSING") {
-          timer = setTimeout(() => tick(false), POLL_MS);
-        } else {
-          terminalRef.current?.(d.application_id);
+        if (previousStatus === "PROCESSING" && d.status !== "PROCESSING") {
+          setAnnouncement(
+            `${d.application_id_external ?? shortId(d.application_id)} decided: ${label(STATUS_LABEL, d.status)}`,
+          );
         }
+        previousStatus = d.status;
+        if (d.status === "PROCESSING") timer = setTimeout(tick, POLL_MS);
+        else terminalRef.current?.(d.application_id);
       } catch (e) {
         if (cancelled) return;
-        const msg = e instanceof ApiError ? `${e.status} ${e.message}` : String(e);
-        setError(msg);
-      } finally {
-        if (!cancelled && first) setLoading(false);
+        const notFound = e instanceof ApiError && e.status === 404;
+        setError({
+          message: e instanceof ApiError ? (e.body?.error ?? (e.status ? `HTTP ${e.status}` : "network error")) : String(e),
+          notFound,
+        });
+        if (notFound) return;
+        failures += 1;
+        timer = setTimeout(tick, Math.min(MAX_BACKOFF_MS, POLL_MS * 2 ** Math.min(failures, 3)));
       }
     }
 
-    setDetail(null);
-    tick(true);
+    void tick();
     return () => {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
   }, [apiKey, applicationId]);
 
-  if (!applicationId) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>3 · Decision</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="flex items-center gap-2 pb-2 text-sm text-muted-foreground">
-            <MousePointerClick className="h-4 w-4" />
-            Select an application above to see how it was decided.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const live = (
+    <div aria-live="polite" aria-atomic="true" className="sr-only">
+      {announcement}
+    </div>
+  );
 
-  if (error && !detail) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>3 · Decision</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="pb-2 text-sm text-red-600 dark:text-red-400">{error}</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (!applicationId) return <EmptyDecision />;
 
   if (!detail) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>3 · Decision</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="flex items-center gap-2 pb-2 text-sm text-muted-foreground">
-            <Spinner className="h-4 w-4" />
-            {loading ? "Loading…" : "…"}
+    if (error?.notFound) {
+      return (
+        <Shell>
+          {live}
+          <p className="text-14 font-medium">Application not found</p>
+          <p className="mt-1 text-13 text-subtle">
+            It does not exist for this customer. Applications are only visible to the API key that
+            created them.
           </p>
-        </CardContent>
-      </Card>
+        </Shell>
+      );
+    }
+    return (
+      <Shell>
+        {live}
+        <div aria-busy className="space-y-3">
+          <div className="h-3 w-48 rounded bg-selected" />
+          <div className="h-6 w-32 rounded bg-selected" />
+          <div className="h-3 w-72 rounded bg-hover" />
+          {error ? <p className="pt-2 text-13 text-reject">Could not load: {error.message}. Retrying…</p> : null}
+        </div>
+      </Shell>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>3 · Decision</CardTitle>
-        <CardDescription className="font-mono text-xs">
-          {detail.application_id}
-          {detail.application_id_external ? ` · ${detail.application_id_external}` : ""}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <OutcomeHeader detail={detail} />
-        {detail.status === "PROCESSING" ? (
-          <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Spinner className="h-4 w-4" />
-            The worker has not finished. This view refreshes every 2 seconds.
-          </p>
-        ) : (
-          <>
-            <Separator />
-            <ClauseSection detail={detail} />
-            <Separator />
-            <UpstreamSection calls={detail.upstream_calls ?? []} />
-            <Separator />
-            <ExtractionSection detail={detail} />
-            <Separator />
-            <HashFooter detail={detail} />
-          </>
-        )}
-      </CardContent>
-    </Card>
+    <Shell>
+      {live}
+      {error ? (
+        <p className="mb-4 flex items-center gap-2 text-12 text-review">
+          <WifiOff className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+          Lost contact with the API ({error.message}). Retrying…
+        </p>
+      ) : null}
+      <DecisionDetail detail={detail} fallbackCustomer={customerByKey(apiKey).name} tab={tab} onTab={setTab} />
+    </Shell>
   );
 }
 
-function OutcomeHeader({ detail }: { detail: ApplicationDetail }) {
-  const policy = detail.policy;
-  const pinned = policy?.version ?? null;
-  const active = policy?.active_version_now ?? null;
+function Shell({ children }: { children: React.ReactNode }) {
+  return <div className="mx-auto w-full max-w-[56rem] px-4 py-6 sm:px-8 lg:py-8">{children}</div>;
+}
+
+function EmptyDecision() {
+  return (
+    <Shell>
+      <div className="max-w-[34rem] pt-2">
+        <p className="text-14 font-medium">No application selected</p>
+        <p className="mt-1 text-13 text-subtle">
+          Submit a scenario or pick an application from the list. The outcome appears here with every
+          policy clause it was decided on, the evidence behind each one, and every call made to the
+          registry.
+        </p>
+        <dl className="mt-6 grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-2 gap-y-2 text-13">
+          {(["PASS", "FAIL", "UNDETERMINED", "NOT_APPLICABLE"] as const).map((r) => (
+            <React.Fragment key={r}>
+              <dt className="flex h-5 items-center">
+                <ResultGlyph result={r} />
+              </dt>
+              <dd className="text-subtle">
+                {
+                  {
+                    PASS: "Passed — the clause allows approval.",
+                    FAIL: "Failed — the clause applies its on-fail outcome.",
+                    UNDETERMINED: "Undetermined — an input was missing, so the clause's outcome for undetermined applies.",
+                    NOT_APPLICABLE: "Not applicable — the clause does not cover this business.",
+                  }[r]
+                }
+              </dd>
+            </React.Fragment>
+          ))}
+        </dl>
+      </div>
+    </Shell>
+  );
+}
+
+function DecisionDetail({
+  detail,
+  fallbackCustomer,
+  tab,
+  onTab,
+}: {
+  detail: ApplicationDetail;
+  fallbackCustomer: string;
+  tab: TabId;
+  onTab: (t: TabId) => void;
+}) {
+  const processing = detail.status === "PROCESSING";
+  const now = useNow(processing ? 1000 : 60_000);
+  const customer = customerByPolicy(detail.policy?.customer);
+  const customerName = customer?.name ?? detail.policy?.customer ?? fallbackCustomer;
+  const reasons = detail.reasons ?? [];
+  const deciding = decidingClauses(detail.status, reasons);
+  const concerns = detail.extraction?.concerns ?? [];
+  const injection = concerns.find((c) => c.code === "PROMPT_INJECTION_ATTEMPT");
+  const calls = detail.upstream_calls ?? [];
+  const failedCalls = calls.filter((c) => c.outcome !== "SUCCESS").length;
+  const pinned = detail.policy?.version;
+  const active = detail.policy?.active_version_now;
   const drifted = !!pinned && !!active && pinned !== active;
+  const took = durationBetween(detail.created_at, detail.decided_at);
+  const counts = {
+    FAIL: reasons.filter((r) => r.result === "FAIL").length,
+    UNDETERMINED: reasons.filter((r) => r.result === "UNDETERMINED").length,
+    PASS: reasons.filter((r) => r.result === "PASS").length,
+    NOT_APPLICABLE: reasons.filter((r) => r.result === "NOT_APPLICABLE").length,
+  };
+  const undeterminedOutcomes = [
+    ...new Set(reasons.filter((r) => r.result === "UNDETERMINED").map((r) => r.outcome)),
+  ];
+  const unchecked = `${counts.UNDETERMINED} clause${counts.UNDETERMINED === 1 ? "" : "s"} could not be checked`;
+  const degradedText =
+    counts.UNDETERMINED === 0
+      ? "Some inputs were unavailable when the policy was evaluated."
+      : undeterminedOutcomes.length === 1
+        ? `${unchecked}, so ${customerName}'s policy set ${counts.UNDETERMINED === 1 ? "it" : "them"} to ${label(CLAUSE_OUTCOME_LABEL, undeterminedOutcomes[0])}.`
+        : `${unchecked}; each used its policy's outcome for undetermined clauses.`;
 
   return (
-    <section className="space-y-3">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <StatusBadge status={detail.status} size="xl" />
-        {policy ? (
-          <p className="text-sm">
-            Decided under{" "}
-            <span className="font-mono font-semibold">
-              {policy.customer} {policy.version}
-            </span>
-            {drifted ? (
-              <span className="ml-1.5 font-mono text-amber-700 dark:text-amber-300">
-                (currently active: {active})
-              </span>
-            ) : null}
+    <article aria-labelledby="decision-title" className="space-y-6">
+      <header className="space-y-2">
+        <div className="flex min-w-0 items-center gap-1 text-13">
+          <span className="truncate font-mono text-fg">
+            {detail.application_id_external ?? shortId(detail.application_id)}
+          </span>
+          {detail.application_id_external ? (
+            <CopyButton value={detail.application_id_external} label="external reference" />
+          ) : null}
+          {detail.application_id_external ? (
+            <span className="ml-1 shrink-0 font-mono text-12 text-faint">{shortId(detail.application_id)}</span>
+          ) : null}
+          <CopyButton value={detail.application_id} label="application id" />
+        </div>
+
+        <h1 id="decision-title" className="flex items-center gap-2.5 text-20 font-semibold">
+          <StatusGlyph status={detail.status} size={20} spin />
+          {label(STATUS_LABEL, detail.status)}
+        </h1>
+
+        <p className="text-13 text-subtle">
+          {customerName}
+          {pinned ? <> · policy v{pinned}</> : null}
+          <> · submitted {formatTs(detail.created_at)}</>
+          {processing ? (
+            <> · waiting {formatMs(Math.max(0, now - new Date(detail.created_at).getTime()))}</>
+          ) : took ? (
+            <> · {detail.status === "FAILED" ? "stopped after" : "decided in"} {took}</>
+          ) : null}
+        </p>
+
+        {drifted ? (
+          <p className="text-13 text-subtle">
+            Pinned to v{pinned} when it was accepted. {customerName} is on{" "}
+            <span className="text-fg">v{active}</span> now; this decision does not change.
           </p>
         ) : null}
-        <p className="ml-auto text-xs text-muted-foreground">
-          created {formatTs(detail.created_at)}
-          {detail.decided_at ? ` · decided ${formatTs(detail.decided_at)}` : ""}
-        </p>
-      </div>
+      </header>
 
-      {drifted ? (
-        <p className="text-xs text-muted-foreground">
-          The version was pinned when the application was accepted and is never re-read.
-          The active version has moved on since; this decision did not.
+      {processing ? (
+        <p className="text-13 text-subtle">
+          The worker is verifying the business and reading the documents. This page updates on its
+          own.
         </p>
+      ) : null}
+
+      {detail.status === "FAILED" ? (
+        <Banner
+          tone="reject"
+          icon={<TriangleAlert className="h-3.5 w-3.5" strokeWidth={2} />}
+          title="The worker could not finish this application"
+        >
+          <p>
+            The worker stopped before a decision could be recorded, either because of an error or
+            because it ran out of retries. No outcome was produced, and nothing below should be read
+            as a policy result.
+          </p>
+        </Banner>
       ) : null}
 
       {detail.degraded ? (
-        <div className="rounded-md border border-amber-600/45 bg-amber-500/10 px-3 py-2.5">
-          <p className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-300">
-            <AlertTriangle className="h-4 w-4" />
-            Degraded — decided on incomplete evidence
-          </p>
-          <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-sm text-amber-800/90 dark:text-amber-200/90">
-            {(detail.degraded_reasons ?? []).map((r, i) => (
-              <li key={i}>{r}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {detail.status === "FAILED" && detail.error ? (
-        <div className="rounded-md border border-border bg-muted px-3 py-2.5 text-sm">
-          <span className="font-semibold">Failure: </span>
-          <span className="font-mono text-xs">{detail.error}</span>
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-function ClauseSection({ detail }: { detail: ApplicationDetail }) {
-  const reasons = detail.reasons ?? [];
-  return (
-    <section className="space-y-3">
-      <SectionTitle n={2} title="Clauses" sub={`${reasons.length} evaluated`} />
-      {reasons.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No clause results recorded.</p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[4.5rem]">Clause</TableHead>
-              <TableHead className="w-[10rem]">Result</TableHead>
-              <TableHead className="w-[7rem]">Outcome</TableHead>
-              <TableHead className="w-[36%]">Clause text</TableHead>
-              <TableHead>Explanation</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {reasons.map((r) => (
-              <TableRow key={r.clause_id}>
-                <TableCell className="font-mono text-xs font-semibold">
-                  {r.clause_id}
-                </TableCell>
-                {}
-                <TableCell>
-                  <ResultBadge result={r.result} />
-                </TableCell>
-                <TableCell>
-                  <ClauseOutcomeBadge outcome={r.outcome} />
-                </TableCell>
-                {}
-                <TableCell className="text-xs leading-relaxed text-muted-foreground">
-                  {r.clause_text}
-                </TableCell>
-                <TableCell className="text-xs leading-relaxed">
-                  {r.explanation}
-                  {r.evidence_refs?.length ? (
-                    <span className="mt-1.5 flex flex-wrap gap-1">
-                      {r.evidence_refs.map((e) => (
-                        <span
-                          key={e}
-                          className="rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
-                        >
-                          {e}
-                        </span>
-                      ))}
-                    </span>
-                  ) : null}
-                  {r.missing_inputs?.length ? (
-                    <span className="mt-1 block font-mono text-[10px] text-amber-700 dark:text-amber-300">
-                      missing: {r.missing_inputs.join(", ")}
-                    </span>
-                  ) : null}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-
-      {detail.policy?.resolved ? (
-        <Collapsible label="Resolved policy — every clause with its on_fail / on_undetermined">
-          <pre className="max-h-[28rem] overflow-auto scrollbar-thin rounded-md border border-border bg-muted/40 p-3 font-mono text-[11px] leading-relaxed">
-            {JSON.stringify(detail.policy.resolved, null, 2)}
-          </pre>
-        </Collapsible>
-      ) : null}
-    </section>
-  );
-}
-
-function UpstreamSection({ calls }: { calls: NonNullable<ApplicationDetail["upstream_calls"]> }) {
-  const breakerRows = calls.filter((c) => c.outcome === "CIRCUIT_OPEN").length;
-  return (
-    <section className="space-y-3">
-      <SectionTitle
-        n={3}
-        title="Upstream calls"
-        sub={
-          calls.length === 0
-            ? "none recorded"
-            : `${calls.length} attempt${calls.length === 1 ? "" : "s"}${
-                breakerRows ? ` · ${breakerRows} refused by the breaker` : ""
-              }`
-        }
-      />
-      {calls.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No upstream attempt was recorded for this application.
-        </p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[5rem]">Attempt</TableHead>
-              <TableHead className="w-[11rem]">Outcome</TableHead>
-              <TableHead className="w-[7rem]">Duration</TableHead>
-              <TableHead className="w-[6rem]">Status</TableHead>
-              <TableHead className="w-[7rem]">Retry-After</TableHead>
-              <TableHead>Started</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {calls.map((c, i) => {
-              const breaker = c.outcome === "CIRCUIT_OPEN";
-              return (
-                <TableRow
-                  key={`${c.attempt}-${i}`}
-                  className={cn(
-                    breaker &&
-                      "border-l-4 border-l-violet-500 bg-violet-500/10 dark:bg-violet-500/15",
-                  )}
-                >
-                  <TableCell className="font-mono text-xs">{c.attempt}</TableCell>
-                  <TableCell>
-                    <UpstreamOutcomeBadge outcome={c.outcome} />
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{c.duration_ms} ms</TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {c.status_code ?? "—"}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {c.retry_after_sec != null ? `${c.retry_after_sec}s` : "—"}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                    {formatTs(c.started_at)}
-                    {breaker ? (
-                      <span className="mt-0.5 block text-[11px] font-medium text-violet-700 dark:text-violet-300">
-                        circuit open — no request was sent
-                      </span>
-                    ) : null}
-                    {c.error ? (
-                      <span className="mt-0.5 block font-mono text-[10px] opacity-80">
-                        {c.error}
-                      </span>
-                    ) : null}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      )}
-    </section>
-  );
-}
-
-function ExtractionSection({ detail }: { detail: ApplicationDetail }) {
-  const x = detail.extraction;
-
-  if (!x) {
-    return (
-      <section className="space-y-3">
-        <SectionTitle n={4} title="Extraction" sub="not recorded" />
-        <p className="text-sm text-muted-foreground">
-          No extraction envelope was recorded for this application.
-        </p>
-      </section>
-    );
-  }
-
-  const fields = x.fields ?? [];
-  const ungrounded = x.ungrounded ?? [];
-  const concerns = x.concerns ?? [];
-
-  return (
-    <section className="space-y-3">
-      <SectionTitle
-        n={4}
-        title="Extraction"
-        sub={
-          x.available
-            ? `${fields.length} grounded · ${ungrounded.length} discarded · ${concerns.length} concern${
-                concerns.length === 1 ? "" : "s"
-              }${x.model ? ` · ${x.model}` : ""}${x.cached ? " · cached" : ""}`
-            : "unavailable"
-        }
-      />
-
-      {!x.available ? (
-        <div className="rounded-md border border-amber-600/45 bg-amber-500/10 px-3 py-2.5">
-          <p className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-300">
-            <FileSearch className="h-4 w-4" />
-            Model unavailable — {x.reason ?? "unknown reason"}
-          </p>
-          <p className="mt-1 text-xs text-amber-800/90 dark:text-amber-200/90">
-            Clauses that needed an extracted fact are UNDETERMINED, not failed. The model
-            decides nothing either way.
-          </p>
-        </div>
-      ) : (
-        <>
-          {fields.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Extraction succeeded and returned no fields — there was nothing in the note or
-              the document to ground.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[14rem]">Field</TableHead>
-                  <TableHead className="w-[16rem]">Value</TableHead>
-                  <TableHead>Quote it was grounded in</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {fields.map((f) => (
-                  <TableRow key={f.name}>
-                    <TableCell className="font-mono text-xs">{f.name}</TableCell>
-                    <TableCell className="font-mono text-xs font-semibold">
-                      {f.value}
-                    </TableCell>
-                    <TableCell className="text-xs italic text-muted-foreground">
-                      “{f.provenance?.quote ?? "—"}”
-                      {f.provenance?.source ? (
-                        <span className="ml-1.5 not-italic opacity-70">
-                          ({f.provenance.source})
-                        </span>
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-
-          {ungrounded.length ? (
-            <div className="rounded-md border border-dashed border-border bg-muted/30 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Ungrounded — asserted by model, not found in source — discarded
-              </p>
-              <ul className="mt-2 space-y-1.5">
-                {ungrounded.map((u, i) => (
-                  <li key={`${u.name}-${i}`} className="text-xs text-muted-foreground">
-                    <span className="font-mono line-through">{u.name}</span>{" "}
-                    <span className="font-mono line-through opacity-80">= {u.value}</span>
-                    <span className="ml-2 italic line-through opacity-70">“{u.quote}”</span>
-                  </li>
+        <Banner
+          tone="review"
+          icon={<TriangleAlert className="h-3.5 w-3.5" strokeWidth={2} />}
+          title="Decided on incomplete evidence"
+        >
+          <p>{degradedText}</p>
+          {(detail.degraded_reasons ?? []).length > 0 ? (
+            <Collapsible summary={<span className="text-12">Show what was missing</span>}>
+              <ul className="space-y-0.5 pb-1 text-12">
+                {(detail.degraded_reasons ?? []).map((r, i) => (
+                  <li key={i}>{r}</li>
                 ))}
               </ul>
-            </div>
+            </Collapsible>
           ) : null}
-        </>
-      )}
+        </Banner>
+      ) : null}
 
-      {concerns.length ? (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Concerns — surfaced, never scored
+      {injection ? (
+        <Banner
+          tone="reject"
+          icon={<ShieldAlert className="h-3.5 w-3.5" strokeWidth={2} />}
+          title="An instruction in the document was ignored"
+        >
+          {realQuote(injection.quote) ? (
+            <p>
+              <Quote>{realQuote(injection.quote)}</Quote>
+            </p>
+          ) : null}
+          <p className="text-subtle">
+            The model has no field that can set an outcome, so the text changed nothing. It is
+            reported here for a reviewer.
           </p>
-          {concerns.map((c, i) => {
-            const injection = c.code === "PROMPT_INJECTION_ATTEMPT";
-            return (
-              <div
-                key={`${c.code}-${i}`}
-                className={cn(
-                  "rounded-md border px-3 py-2.5",
-                  injection
-                    ? "border-red-600/60 bg-red-500/10"
-                    : "border-border bg-muted/30",
-                )}
-              >
-                <p
-                  className={cn(
-                    "flex items-center gap-2 text-sm font-semibold",
-                    injection ? "text-red-700 dark:text-red-300" : "",
-                  )}
-                >
-                  {injection ? (
-                    <Siren className="h-4 w-4" />
-                  ) : (
-                    <ShieldAlert className="h-4 w-4 opacity-70" />
-                  )}
-                  {c.code}
-                </p>
-                <p
-                  className={cn(
-                    "mt-1 text-xs",
-                    injection ? "text-red-700/90 dark:text-red-300/90" : "text-muted-foreground",
-                  )}
-                >
-                  {c.detail}
-                </p>
-                {c.quote ? (
-                  <p className="mt-1 font-mono text-[11px] italic opacity-80">“{c.quote}”</p>
-                ) : null}
-                {injection ? (
-                  <p className="mt-1.5 text-[11px] font-medium text-red-700 dark:text-red-300">
-                    The instruction was reported and ignored. It changed no clause and no
-                    outcome.
-                  </p>
-                ) : null}
-              </div>
-            );
-          })}
+        </Banner>
+      ) : null}
+
+      {!processing && detail.status !== "FAILED" ? (
+        <WhySummary status={detail.status} deciding={deciding} counts={counts} />
+      ) : null}
+
+      {!processing ? (
+        <div>
+          <div className="border-b">
+            <Tabs
+              idPrefix="decision"
+              value={tab}
+              onChange={(id) => onTab(id as TabId)}
+              items={[
+                { id: "clauses", label: "Clauses", count: reasons.length },
+                {
+                  id: "evidence",
+                  label: "Evidence",
+                  count: concerns.length || undefined,
+                  tone: concerns.length ? "attention" : "default",
+                },
+                {
+                  id: "calls",
+                  label: "Registry calls",
+                  shortLabel: "Calls",
+                  count: calls.length,
+                  tone: failedCalls ? "attention" : "default",
+                },
+                { id: "policy", label: "Policy" },
+              ]}
+            />
+          </div>
+          <div className="pt-5">
+            <TabPanel idPrefix="decision" id="clauses" active={tab === "clauses"}>
+              <ClausesPanel reasons={reasons} deciding={new Set(deciding.map((r) => r.clause_id))} />
+            </TabPanel>
+            <TabPanel idPrefix="decision" id="evidence" active={tab === "evidence"}>
+              <EvidencePanel detail={detail} />
+            </TabPanel>
+            <TabPanel idPrefix="decision" id="calls" active={tab === "calls"}>
+              <CallsPanel calls={calls} />
+            </TabPanel>
+            <TabPanel idPrefix="decision" id="policy" active={tab === "policy"}>
+              <PolicyPanel detail={detail} customerName={customerName} />
+            </TabPanel>
+          </div>
         </div>
       ) : null}
+    </article>
+  );
+}
+
+function WhySummary({
+  status,
+  deciding,
+  counts,
+}: {
+  status: string;
+  deciding: Reason[];
+  counts: Record<"FAIL" | "UNDETERMINED" | "PASS" | "NOT_APPLICABLE", number>;
+}) {
+  const failed = deciding.filter((r) => r.result === "FAIL");
+  const undetermined = deciding.filter((r) => r.result === "UNDETERMINED");
+  const tone = status === "REJECTED" ? "text-reject" : "text-review";
+  const outcome = status === "REJECTED" ? "Reject" : "Review";
+
+  return (
+    <section aria-label="Why this outcome" className="space-y-2">
+      {status === "APPROVED" ? <p className="text-14 text-fg">Every clause allows approval.</p> : null}
+      {deciding.length > 0 ? (
+        <ul className="space-y-1.5 text-14">
+          {failed.map((r) => (
+            <li key={r.clause_id} className="grid grid-cols-[16px_2.25rem_minmax(0,1fr)] gap-x-2.5">
+              <span className="flex h-5 items-center">
+                <ResultGlyph result={r.result} />
+              </span>
+              <span className="font-mono text-13 font-medium leading-5">{r.clause_id}</span>
+              <span className="text-fg">
+                {r.clause_text} <span className={cn("whitespace-nowrap text-13", tone)}>→ {outcome}</span>
+              </span>
+            </li>
+          ))}
+          {undetermined.length > 0 ? (
+            <li className="grid grid-cols-[16px_minmax(0,1fr)] gap-x-2.5">
+              <span className="flex h-5 items-center">
+                <ResultGlyph result="UNDETERMINED" />
+              </span>
+              <span className="text-fg">
+                <span className="font-mono text-13 font-medium">
+                  {undetermined.map((r) => r.clause_id).join(", ")}
+                </span>{" "}
+                could not be checked{" "}
+                <span className={cn("whitespace-nowrap text-13", tone)}>→ {outcome}</span>
+              </span>
+            </li>
+          ) : null}
+        </ul>
+      ) : null}
+      <p className="text-12 text-faint">
+        {[
+          counts.FAIL ? `${counts.FAIL} failed` : null,
+          counts.UNDETERMINED ? `${counts.UNDETERMINED} undetermined` : null,
+          counts.PASS ? `${counts.PASS} passed` : null,
+          counts.NOT_APPLICABLE ? `${counts.NOT_APPLICABLE} not applicable` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      </p>
     </section>
-  );
-}
-
-function HashFooter({ detail }: { detail: ApplicationDetail }) {
-  return (
-    <div className="flex flex-wrap gap-x-6 gap-y-1 font-mono text-[11px] text-muted-foreground">
-      <span>evidence_hash: {detail.evidence_hash ?? "—"}</span>
-      <span>policy_hash: {detail.policy_hash ?? "—"}</span>
-    </div>
-  );
-}
-
-function SectionTitle({ n, title, sub }: { n: number; title: string; sub?: string }) {
-  return (
-    <div className="flex items-baseline gap-3">
-      <h3 className="text-sm font-semibold">
-        <span className="mr-2 text-muted-foreground">{n}.</span>
-        {title}
-      </h3>
-      {sub ? <span className="text-xs text-muted-foreground">{sub}</span> : null}
-    </div>
-  );
-}
-
-function Collapsible({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <details className="group rounded-md border border-border bg-background">
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground">
-        <ChevronRight className="h-3.5 w-3.5 transition-transform group-open:rotate-90" />
-        {label}
-      </summary>
-      <div className="border-t border-border p-2">{children}</div>
-    </details>
   );
 }

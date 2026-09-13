@@ -1,80 +1,128 @@
 import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const Select = SelectPrimitive.Root;
-const SelectValue = SelectPrimitive.Value;
+const TriggerRef = React.createContext<React.MutableRefObject<HTMLButtonElement | null> | null>(null);
 
-const SelectTrigger = React.forwardRef<
+let lastInputWasPointer = false;
+if (typeof document !== "undefined") {
+  document.addEventListener("pointerdown", () => (lastInputWasPointer = true), true);
+  document.addEventListener("keydown", () => (lastInputWasPointer = false), true);
+}
+
+export function Select(props: React.ComponentProps<typeof SelectPrimitive.Root>) {
+  const trigger = React.useRef<HTMLButtonElement | null>(null);
+  return (
+    <TriggerRef.Provider value={trigger}>
+      <SelectPrimitive.Root {...props} />
+    </TriggerRef.Provider>
+  );
+}
+
+export const SelectValue = SelectPrimitive.Value;
+export const SelectGroup = SelectPrimitive.Group;
+
+export const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
-  <SelectPrimitive.Trigger
-    ref={ref}
-    className={cn(
-      "flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
-      className,
-    )}
-    {...props}
-  >
-    {children}
-    <SelectPrimitive.Icon asChild>
-      <ChevronDown className="h-4 w-4 opacity-60" />
-    </SelectPrimitive.Icon>
-  </SelectPrimitive.Trigger>
-));
-SelectTrigger.displayName = SelectPrimitive.Trigger.displayName;
-
-const SelectContent = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = "popper", ...props }, ref) => (
-  <SelectPrimitive.Portal>
-    <SelectPrimitive.Content
-      ref={ref}
-      position={position}
+>(({ className, children, ...props }, ref) => {
+  const ctx = React.useContext(TriggerRef);
+  return (
+    <SelectPrimitive.Trigger
+      ref={(el) => {
+        if (ctx) ctx.current = el;
+        if (typeof ref === "function") ref(el);
+        else if (ref) ref.current = el;
+      }}
       className={cn(
-        "relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-lg data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        position === "popper" &&
-          "data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1",
+        "flex h-9 w-full items-center justify-between gap-2 rounded border border-line-strong bg-surface px-2.5 text-left text-14 text-fg hover:border-faint data-[placeholder]:text-faint disabled:cursor-not-allowed disabled:opacity-60",
         className,
       )}
       {...props}
     >
-      <SelectPrimitive.Viewport
+      <span className="flex min-w-0 flex-1 items-center">{children}</span>
+      <SelectPrimitive.Icon asChild>
+        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-faint" strokeWidth={2} />
+      </SelectPrimitive.Icon>
+    </SelectPrimitive.Trigger>
+  );
+});
+SelectTrigger.displayName = SelectPrimitive.Trigger.displayName;
+
+export const SelectContent = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
+>(({ className, children, onCloseAutoFocus, ...props }, ref) => {
+  const ctx = React.useContext(TriggerRef);
+  return (
+    <SelectPrimitive.Portal>
+      <SelectPrimitive.Content
+        ref={ref}
+        position="popper"
+        sideOffset={4}
+        onCloseAutoFocus={(e) => {
+          onCloseAutoFocus?.(e);
+          if (e.defaultPrevented || !lastInputWasPointer || !ctx?.current) return;
+          e.preventDefault();
+          ctx.current.focus({ preventScroll: true, focusVisible: false } as FocusOptions);
+        }}
         className={cn(
-          "p-1",
-          position === "popper" && "w-full min-w-[var(--radix-select-trigger-width)]",
+          "z-50 max-h-[min(26rem,var(--radix-select-content-available-height))] w-[var(--radix-select-trigger-width)] max-w-[calc(100vw-32px)] overflow-hidden rounded-md border border-line-strong/70 bg-surface text-fg shadow-float",
+          className,
         )}
+        {...props}
       >
-        {children}
-      </SelectPrimitive.Viewport>
-    </SelectPrimitive.Content>
-  </SelectPrimitive.Portal>
-));
+        <SelectPrimitive.Viewport className="p-1">{children}</SelectPrimitive.Viewport>
+      </SelectPrimitive.Content>
+    </SelectPrimitive.Portal>
+  );
+});
 SelectContent.displayName = SelectPrimitive.Content.displayName;
 
-const SelectItem = React.forwardRef<
+export function SelectLabel({ children }: { children: React.ReactNode }) {
+  return <SelectPrimitive.Label className="px-2 pb-1 pt-2 text-12 text-faint">{children}</SelectPrimitive.Label>;
+}
+
+export function SelectSeparator() {
+  return <SelectPrimitive.Separator className="mx-1 my-1 h-px bg-line" />;
+}
+
+export const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item> & {
+    textId?: string;
+    accessory?: React.ReactNode;
+    description?: React.ReactNode;
+    descriptionId?: string;
+  }
+>(({ className, children, textId, accessory, description, descriptionId, ...props }, ref) => (
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "grid cursor-default select-none grid-cols-[16px_minmax(0,1fr)] items-start gap-x-2 gap-y-0.5 rounded px-2 py-2 text-fg outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-selected data-[disabled]:text-faint data-[highlighted]:shadow-[inset_2px_0_0_0_oklch(var(--accent))] sm:grid-cols-[16px_minmax(0,1fr)_auto]",
       className,
     )}
     {...props}
   >
-    <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+    <span className="row-span-3 flex h-5 items-center sm:row-span-2">
       <SelectPrimitive.ItemIndicator>
-        <Check className="h-4 w-4" />
+        <Check className="h-3.5 w-3.5" strokeWidth={2} />
       </SelectPrimitive.ItemIndicator>
     </span>
-    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+    <SelectPrimitive.ItemText {...(textId ? { id: textId } : {})}>
+      <span className="text-14 font-medium">{children}</span>
+    </SelectPrimitive.ItemText>
+    {accessory ? (
+      <span className="col-start-2 row-start-3 flex items-start pt-0.5 sm:col-start-3 sm:row-span-2 sm:row-start-1">
+        {accessory}
+      </span>
+    ) : null}
+    {description ? (
+      <span id={descriptionId} className="col-start-2 row-start-2 text-12 text-subtle">
+        {description}
+      </span>
+    ) : null}
   </SelectPrimitive.Item>
 ));
 SelectItem.displayName = SelectPrimitive.Item.displayName;
-
-export { Select, SelectValue, SelectTrigger, SelectContent, SelectItem };

@@ -1,102 +1,91 @@
-import { Badge, type BadgeProps } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/spinner";
-import type {
-  ApplicationStatus,
-  ClauseOutcome,
-  ClauseResultKind,
-  ServiceLiveness,
-  UpstreamCallOutcome,
-} from "@/api";
+import {
+  Check,
+  CircleCheck,
+  CircleDashed,
+  CircleDot,
+  CircleHelp,
+  CircleX,
+  Minus,
+  TriangleAlert,
+  X,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { RESULT_LABEL, STATUS_LABEL, label } from "@/lib/labels";
 
-type Tone = NonNullable<BadgeProps["tone"]>;
+type GlyphProps = { className?: string; size?: number };
 
-const STATUS_TONE: Record<string, Tone> = {
-  APPROVED: "green",
-  REVIEW: "amber",
-  REJECTED: "red",
-  FAILED: "grey",
-  PROCESSING: "blue",
+const STATUS_GLYPH: Record<string, { Icon: typeof Check; color: string }> = {
+  APPROVED: { Icon: CircleCheck, color: "text-approve" },
+  REVIEW: { Icon: CircleDot, color: "text-review" },
+  REJECTED: { Icon: CircleX, color: "text-reject" },
+  FAILED: { Icon: TriangleAlert, color: "text-reject" },
+  PROCESSING: { Icon: CircleDashed, color: "text-info" },
 };
 
-export function StatusBadge({
+export function StatusGlyph({
   status,
-  size,
-}: {
-  status: ApplicationStatus | string;
-  size?: BadgeProps["size"];
-}) {
-  const tone = STATUS_TONE[status] ?? "neutral";
+  className,
+  size = 14,
+  spin = false,
+}: GlyphProps & { status: string; spin?: boolean }) {
+  const g = STATUS_GLYPH[status] ?? { Icon: CircleDashed, color: "text-faint" };
   return (
-    <Badge tone={tone} size={size}>
-      {status === "PROCESSING" ? <Spinner /> : null}
-      {status}
-    </Badge>
+    <g.Icon
+      aria-hidden
+      width={size}
+      height={size}
+      strokeWidth={2}
+      className={cn(
+        "shrink-0",
+        g.color,
+        spin && status === "PROCESSING" && "motion-safe:animate-[spin_3s_linear_infinite]",
+        className,
+      )}
+    />
   );
 }
 
-const RESULT_TONE: Record<ClauseResultKind, Tone> = {
-  PASS: "green",
-  FAIL: "red",
-  UNDETERMINED: "amber",
-  NOT_APPLICABLE: "grey",
-};
-
-export function ResultBadge({ result }: { result: ClauseResultKind | string }) {
-  const tone = RESULT_TONE[result as ClauseResultKind] ?? "neutral";
-  return <Badge tone={tone}>{result}</Badge>;
-}
-
-const CLAUSE_OUTCOME_TONE: Record<ClauseOutcome, Tone> = {
-  APPROVE: "green",
-  REVIEW: "amber",
-  REJECT: "red",
-};
-
-export function ClauseOutcomeBadge({ outcome }: { outcome: ClauseOutcome | string }) {
-  const tone = CLAUSE_OUTCOME_TONE[outcome as ClauseOutcome] ?? "neutral";
+export function StatusLabel({ status, className, size }: GlyphProps & { status: string }) {
   return (
-    <Badge tone={tone} className="bg-transparent">
-      {outcome}
-    </Badge>
+    <span className={cn("inline-flex items-center gap-1.5", className)}>
+      <StatusGlyph status={status} size={size} />
+      <span>{label(STATUS_LABEL, status)}</span>
+    </span>
   );
 }
 
-const UPSTREAM_TONE: Record<UpstreamCallOutcome, Tone> = {
-  SUCCESS: "green",
-  TIMEOUT: "amber",
-  RATE_LIMITED: "amber",
-  HTTP_5XX: "red",
-  HTTP_4XX: "red",
-  CONN_RESET: "red",
-  CIRCUIT_OPEN: "violet",
+const RESULT_GLYPH: Record<string, { Icon: typeof Check; color: string }> = {
+  PASS: { Icon: Check, color: "text-approve" },
+  FAIL: { Icon: X, color: "text-reject" },
+  UNDETERMINED: { Icon: CircleHelp, color: "text-review" },
+  NOT_APPLICABLE: { Icon: Minus, color: "text-faint" },
 };
 
-export function UpstreamOutcomeBadge({ outcome }: { outcome: UpstreamCallOutcome | string }) {
-  const tone = UPSTREAM_TONE[outcome as UpstreamCallOutcome] ?? "neutral";
-  return <Badge tone={tone}>{outcome}</Badge>;
-}
-
-export function CircuitBadge({ circuit }: { circuit: string }) {
-  const tone: Tone =
-    circuit === "CLOSED" ? "green" : circuit === "OPEN" ? "red" : "amber";
-  return <Badge tone={tone}>{circuit}</Badge>;
-}
-
-export function ServiceBadge({
-  label,
-  liveness,
-}: {
-  label: string;
-  liveness: ServiceLiveness | null;
-}) {
-  if (!liveness) return <Badge tone="neutral">{label} …</Badge>;
-  const tone: Tone = !liveness.reachable ? "red" : liveness.status === "ok" ? "green" : "amber";
-  const detail = liveness.reachable
-    ? `${liveness.status ?? "unknown"}${liveness.latency_ms != null ? ` · ${liveness.latency_ms}ms` : ""}`
-    : liveness.error || "unreachable";
+export function ResultGlyph({ result, className, size = 14 }: GlyphProps & { result: string }) {
+  const g = RESULT_GLYPH[result] ?? RESULT_GLYPH.NOT_APPLICABLE!;
   return (
-    <Badge tone={tone} title={detail}>
-      {label}
-    </Badge>
+    <g.Icon
+      role="img"
+      aria-label={label(RESULT_LABEL, result)}
+      width={size}
+      height={size}
+      strokeWidth={2.25}
+      className={cn("shrink-0", g.color, className)}
+    />
+  );
+}
+
+export type Tone = "approve" | "review" | "reject" | "info" | "faint";
+
+export function Dot({ tone, className }: { tone: Tone; className?: string }) {
+  const bg = {
+    approve: "bg-approve",
+    review: "bg-review",
+    reject: "bg-reject",
+    info: "bg-info",
+    faint: "bg-faint",
+  }[tone];
+  return (
+    <span aria-hidden className={cn("inline-block h-1.5 w-1.5 shrink-0 rounded-full", bg, className)} />
   );
 }

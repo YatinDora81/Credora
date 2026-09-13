@@ -1,11 +1,8 @@
 import * as React from "react";
-import { Activity, Cpu, Moon, Sun, Database, Layers, Server } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CircuitBadge, ServiceBadge } from "@/components/ui/status";
+import { AppHeader, type ServiceMap } from "@/components/AppHeader";
 import { ApplicationList } from "@/components/ApplicationList";
+import { Composer, type SubmitResult } from "@/components/Composer";
 import { DecisionView } from "@/components/DecisionView";
-import { CUSTOMERS, SubmitPanel } from "@/components/SubmitPanel";
 import {
   ApiError,
   getHealth,
@@ -13,83 +10,144 @@ import {
   listApplications,
   type ApplicationListItem,
   type HealthResponse,
-  type KeepaliveResponse,
 } from "@/api";
+import { CUSTOMERS, customerByKey } from "@/fixtures";
+import { cn } from "@/lib/utils";
 
+const LIST_LIMIT = 25;
 const LIST_POLL_MS = 2000;
 const HEALTH_POLL_MS = 5000;
 const KEEPALIVE_MS = 2000;
+const THEME_KEY = "deepvue.theme";
 
-type ServiceMap = Partial<KeepaliveResponse["services"]>;
+function readTheme(): boolean {
+  return document.documentElement.classList.contains("dark");
+}
 
 export default function App() {
-  const [apiKey, setApiKey] = React.useState<string>(CUSTOMERS[0].apiKey);
+  const [apiKey, setApiKey] = React.useState<string>(CUSTOMERS[0]!.apiKey);
   const [items, setItems] = React.useState<ApplicationListItem[]>([]);
   const [optimistic, setOptimistic] = React.useState<ApplicationListItem[]>([]);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [listError, setListError] = React.useState<string | null>(null);
-  const [listLoading, setListLoading] = React.useState(false);
+  const [initialLoading, setInitialLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
   const [health, setHealth] = React.useState<HealthResponse | null>(null);
   const [healthError, setHealthError] = React.useState<string | null>(null);
   const [services, setServices] = React.useState<ServiceMap | null>(null);
-  const [dark, setDark] = React.useState(true);
+  const [dark, setDark] = React.useState(readTheme);
+  const decisionRef = React.useRef<HTMLElement>(null);
+  const listAbort = React.useRef<AbortController | null>(null);
+  const apiKeyRef = React.useRef(apiKey);
+  apiKeyRef.current = apiKey;
+
+  const customer = customerByKey(apiKey);
 
   React.useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
 
-  const refresh = React.useCallback(async () => {
-    setListLoading(true);
-    try {
-      const rows = await listApplications(apiKey, 25);
-      setItems(rows);
-      setListError(null);
-      setOptimistic((prev) =>
-        prev.filter((o) => !rows.some((r) => r.application_id === o.application_id)),
-      );
-    } catch (e) {
-      setListError(e instanceof ApiError ? `${e.status} ${e.message}` : String(e));
-    } finally {
-      setListLoading(false);
-    }
-  }, [apiKey]);
+  const toggleTheme = React.useCallback(() => {
+    setDark((d) => {
+      const next = !d;
+      try {
+        localStorage.setItem(THEME_KEY, next ? "dark" : "light");
+      } catch {
+        return next;
+      }
+      return next;
+    });
+  }, []);
+
+  const refresh = React.useCallback(
+    async (manual = false) => {
+      listAbort.current?.abort();
+      const controller = new AbortController();
+      listAbort.current = controller;
+      if (manual) setRefreshing(true);
+      try {
+        const rows = await listApplications(apiKey, LIST_LIMIT, controller.signal);
+        if (controller.signal.aborted || apiKey !== apiKeyRef.current) return;
+        setItems(rows);
+        setListError(null);
+        setOptimistic((prev) =>
+          prev.filter((o) => !rows.some((r) => r.application_id === o.application_id)),
+        );
+      } catch (e) {
+        if (controller.signal.aborted || apiKey !== apiKeyRef.current) return;
+        setListError(e instanceof ApiError ? (e.body?.error ?? `HTTP ${e.status}`) : String(e));
+      } finally {
+        if (listAbort.current === controller) {
+          listAbort.current = null;
+          setInitialLoading(false);
+          setRefreshing(false);
+        }
+      }
+    },
+    [apiKey],
+  );
 
   React.useEffect(() => {
     setItems([]);
     setOptimistic([]);
     setSelectedId(null);
+    setListError(null);
+    setInitialLoading(true);
+    setRefreshing(false);
     void refresh();
+    return () => listAbort.current?.abort();
   }, [refresh]);
 
-  const merged = React.useMemo(() => [...optimistic, ...items], [optimistic, items]);
+  const merged = React.useMemo(
+    () => [
+      ...optimistic.filter((o) => !items.some((i) => i.application_id === o.application_id)),
+      ...items,
+    ],
+    [optimistic, items],
+  );
   const anyProcessing = merged.some((a) => a.status === "PROCESSING");
 
   React.useEffect(() => {
     if (!anyProcessing) return;
-    const t = setInterval(() => void refresh(), LIST_POLL_MS);
+    const t = setInterval(() => {
+      if (!listAbort.current) void refresh();
+    }, LIST_POLL_MS);
     return () => clearInterval(t);
   }, [anyProcessing, refresh]);
 
-  const handleSubmitted = React.useCallback((id: string) => {
-    setOptimistic((prev) =>
-      prev.some((p) => p.application_id === id)
-        ? prev
-        : [
-            {
-              application_id: id,
-              application_id_external: null,
-              status: "PROCESSING",
-              degraded: null,
-              policy: null,
-              created_at: new Date().toISOString(),
-              decided_at: null,
-            },
-            ...prev,
-          ],
-    );
+  const select = React.useCallback((id: string, reveal = true) => {
     setSelectedId(id);
-    void refresh();
-  }, [refresh]);
+    if (reveal && window.matchMedia("(max-width: 1023px)").matches) {
+      requestAnimationFrame(() => decisionRef.current?.scrollIntoView({ block: "start" }));
+    }
+  }, []);
+
+  const handleSubmitted = React.useCallback(
+    ({ applicationId, replayed, apiKey: submittedWith }: SubmitResult) => {
+      if (submittedWith !== apiKeyRef.current) return;
+      if (!replayed) {
+        setOptimistic((prev) =>
+          prev.some((p) => p.application_id === applicationId)
+            ? prev
+            : [
+                {
+                  application_id: applicationId,
+                  application_id_external: null,
+                  status: "PROCESSING",
+                  degraded: null,
+                  policy: null,
+                  created_at: new Date().toISOString(),
+                  decided_at: null,
+                },
+                ...prev,
+              ],
+        );
+      }
+      select(applicationId);
+      void refresh();
+    },
+    [refresh, select],
+  );
 
   React.useEffect(() => {
     let cancelled = false;
@@ -101,7 +159,13 @@ export default function App() {
           setHealthError(null);
         }
       } catch (e) {
-        if (!cancelled) setHealthError(e instanceof ApiError ? e.message : String(e));
+        if (!cancelled) {
+          setHealthError(
+            e instanceof ApiError
+              ? (e.body?.error ?? (e.status ? `http_${e.status}` : "network_error"))
+              : String(e),
+          );
+        }
       }
     }
     void tick();
@@ -141,125 +205,41 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
-      <HealthStrip
-        health={health}
+    <div className="flex min-h-full flex-col lg:h-full">
+      <AppHeader
         services={services}
-        error={healthError}
+        health={health}
+        healthError={healthError}
         dark={dark}
-        onToggleTheme={() => setDark((d) => !d)}
+        onToggleTheme={toggleTheme}
       />
-      <main className="mx-auto w-full max-w-[1400px] space-y-6 px-4 py-6 md:px-6">
-        <SubmitPanel
-          apiKey={apiKey}
-          onApiKeyChange={setApiKey}
-          onSubmitted={handleSubmitted}
-        />
-        <ApplicationList
-          items={merged}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          onRefresh={() => void refresh()}
-          loading={listLoading}
-          polling={anyProcessing}
-          error={listError}
-        />
-        <DecisionView
-          apiKey={apiKey}
-          applicationId={selectedId}
-          onTerminal={() => void refresh()}
-        />
-        <footer className="pb-8 pt-2 text-center text-xs text-muted-foreground">
-          The model never decides anything. Every outcome on this page came from the pinned
-          policy evaluated over resolved evidence.
-        </footer>
-      </main>
-    </div>
-  );
-}
-
-function HealthStrip({
-  health,
-  services,
-  error,
-  dark,
-  onToggleTheme,
-}: {
-  health: HealthResponse | null;
-  services: ServiceMap | null;
-  error: string | null;
-  dark: boolean;
-  onToggleTheme: () => void;
-}) {
-  return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center gap-x-5 gap-y-2 px-4 py-2.5 md:px-6">
-        <div className="flex items-center gap-2">
-          <Layers className="h-4 w-4" />
-          <span className="text-sm font-semibold">Deepvue · Risk Decisioning</span>
-        </div>
-
-        {error ? (
-          <Badge tone="red">HEALTH UNREACHABLE</Badge>
-        ) : !health ? (
-          <Badge tone="neutral">HEALTH …</Badge>
-        ) : (
-          <>
-            <Badge tone={health.status === "ok" ? "green" : "amber"}>{health.status}</Badge>
-
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Activity className="h-3.5 w-3.5" />
-              upstream
-              <CircuitBadge circuit={health.upstream.circuit} />
-              <span className="font-mono">
-                {health.upstream.consecutive_failures} consecutive failure
-                {health.upstream.consecutive_failures === 1 ? "" : "s"}
-              </span>
-            </span>
-
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Cpu className="h-3.5 w-3.5" />
-              model
-              {health.model.outage_simulated ? (
-                <Badge tone="violet">OUTAGE SIMULATED</Badge>
-              ) : health.model.reachable ? (
-                <Badge tone="green">REACHABLE</Badge>
-              ) : (
-                <Badge tone="red">UNREACHABLE</Badge>
-              )}
-              {health.model.model ? (
-                <span className="font-mono">{health.model.model}</span>
-              ) : null}
-            </span>
-
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Database className="h-3.5 w-3.5" />
-              queue
-              <span className="font-mono">
-                {health.queue.pending} pending · {health.queue.processing} processing
-              </span>
-            </span>
-          </>
-        )}
-
-        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Server className="h-3.5 w-3.5" />
-          services
-          <ServiceBadge label="api" liveness={services?.api ?? null} />
-          <ServiceBadge label="worker" liveness={services?.worker ?? null} />
-          <ServiceBadge label="mock" liveness={services?.mock_upstream ?? null} />
-        </span>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="ml-auto"
-          aria-label="Toggle theme"
-          onClick={onToggleTheme}
+      <div className="flex-1 lg:grid lg:min-h-0 lg:grid-cols-[400px_minmax(0,1fr)] xl:grid-cols-[440px_minmax(0,1fr)]">
+        <aside className="border-b lg:flex lg:min-h-0 lg:flex-col lg:overflow-hidden lg:border-b-0 lg:border-r">
+          <div className="scrollbar-thin lg:max-h-[58%] lg:shrink-0 lg:overflow-y-auto">
+            <Composer apiKey={apiKey} onApiKeyChange={setApiKey} onSubmitted={handleSubmitted} />
+          </div>
+          <ApplicationList
+            items={merged}
+            truncated={items.length >= LIST_LIMIT}
+            listLimit={LIST_LIMIT}
+            customerName={customer.name}
+            selectedId={selectedId}
+            onSelect={select}
+            onRefresh={() => void refresh(true)}
+            initialLoading={initialLoading}
+            refreshing={refreshing}
+            polling={anyProcessing}
+            error={listError}
+          />
+        </aside>
+        <main
+          ref={decisionRef}
+          aria-label="Decision"
+          className={cn("scrollbar-thin lg:min-h-0 lg:overflow-y-auto", selectedId && "min-h-[100dvh]")}
         >
-          {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        </Button>
+          <DecisionView apiKey={apiKey} applicationId={selectedId} onTerminal={() => void refresh()} />
+        </main>
       </div>
-    </header>
+    </div>
   );
 }

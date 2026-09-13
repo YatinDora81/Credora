@@ -20,6 +20,7 @@ export type UpstreamCallOutcome =
 export interface CreateApplicationResponse {
   application_id: string;
   status: ApplicationStatus;
+  replayed: boolean;
 }
 
 export interface ApplicationListItem {
@@ -122,6 +123,7 @@ export interface HealthResponse {
   model: {
     reachable: boolean;
     outage_simulated: boolean;
+    reason?: string | null;
     last_checked_at: string | null;
     model: string | null;
   };
@@ -157,6 +159,7 @@ export interface ZodIssueView {
 export interface ErrorBody {
   error?: string;
   message?: string;
+  detail?: string;
   issues?: ZodIssueView[];
   [k: string]: unknown;
 }
@@ -194,10 +197,10 @@ async function parse(res: Response): Promise<{ body: unknown; raw: string }> {
   }
 }
 
-async function request<T>(
+async function requestWithStatus<T>(
   path: string,
   init: RequestInit & { apiKey?: string } = {},
-): Promise<T> {
+): Promise<{ body: T; status: number }> {
   const { apiKey, headers, ...rest } = init;
   const h = new Headers(headers);
   if (apiKey) h.set("X-API-Key", apiKey);
@@ -217,31 +220,40 @@ async function request<T>(
   if (!res.ok) {
     throw new ApiError(res.status, (body as ErrorBody | null) ?? null, raw);
   }
-  return body as T;
+  return { body: body as T, status: res.status };
 }
 
-export function createApplication(args: {
+async function request<T>(path: string, init: RequestInit & { apiKey?: string } = {}): Promise<T> {
+  return (await requestWithStatus<T>(path, init)).body;
+}
+
+export async function createApplication(args: {
   apiKey: string;
   idempotencyKey?: string;
   payload: unknown;
 }): Promise<CreateApplicationResponse> {
   const headers: Record<string, string> = {};
   if (args.idempotencyKey) headers["Idempotency-Key"] = args.idempotencyKey;
-  return request<CreateApplicationResponse>("/v1/applications", {
-    method: "POST",
-    apiKey: args.apiKey,
-    headers,
-    body: JSON.stringify(args.payload),
-  });
+  const { body, status } = await requestWithStatus<Omit<CreateApplicationResponse, "replayed">>(
+    "/v1/applications",
+    {
+      method: "POST",
+      apiKey: args.apiKey,
+      headers,
+      body: JSON.stringify(args.payload),
+    },
+  );
+  return { ...body, replayed: status === 200 };
 }
 
 export async function listApplications(
   apiKey: string,
   limit = 20,
+  signal?: AbortSignal,
 ): Promise<ApplicationListItem[]> {
   const body = await request<ApplicationListResponse | ApplicationListItem[]>(
     `/v1/applications?limit=${encodeURIComponent(String(limit))}`,
-    { apiKey },
+    { apiKey, signal },
   );
   if (Array.isArray(body)) return body;
   return body?.items ?? [];

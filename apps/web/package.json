@@ -11,23 +11,24 @@
   },
   "dependencies": {
     "@deepvue/core": "workspace:*",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "@radix-ui/react-popover": "^1.1.23",
+    "@radix-ui/react-select": "^2.1.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.5",
     "lucide-react": "^0.468.0",
-    "@radix-ui/react-select": "^2.1.4",
-    "@radix-ui/react-label": "^2.1.1"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {
     "@types/react": "^18.3.17",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^6.0.3",
-    "tailwindcss": "^3.4.17",
-    "postcss": "^8.4.49",
     "autoprefixer": "^10.4.20",
-    "tailwindcss-animate": "^1.0.7"
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "vite": "^6.0.3"
   }
 }
