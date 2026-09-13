@@ -163,8 +163,17 @@ const app = express();
 app.disable("x-powered-by");
 app.use(express.json({ strict: false }));
 
+const startedAt = Date.now();
+
 app.get("/health", (_req: Request, res: Response) => {
-  res.json({ ok: true, rates: currentRates() });
+  res.setHeader("Cache-Control", "no-store");
+  res.json({
+    ok: true,
+    service: "mock-upstream",
+    status: "ok",
+    uptime_s: Math.floor((Date.now() - startedAt) / 1000),
+    rates: currentRates(),
+  });
 });
 
 app.get("/verify", async (req: Request, res: Response) => {
