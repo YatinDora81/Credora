@@ -204,14 +204,13 @@ export function Composer({
             aria-invalid={parsed.error ? true : undefined}
             aria-describedby={parsed.error ? bodyErrorId : undefined}
             spellCheck={false}
-            wrap="off"
             value={json}
             onChange={(e) => {
               setJson(e.target.value);
               setEdited(true);
             }}
             className={cn(
-              "block h-72 w-full resize-y overflow-auto whitespace-pre rounded border bg-bg px-3 py-2 font-mono text-12 leading-5 text-fg scrollbar-thin focus:outline-none focus-visible:outline-2 focus-visible:outline-accent",
+              "block h-72 w-full resize-y overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-words rounded border bg-bg px-3 py-2 font-mono text-12 leading-5 text-fg scrollbar-thin focus:outline-none focus-visible:outline-2 focus-visible:outline-accent",
               parsed.error && "border-reject/60",
             )}
           />
