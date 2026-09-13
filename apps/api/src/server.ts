@@ -1,4 +1,3 @@
-import { join } from "node:path";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
 import { prisma } from "@deepvue/db";
@@ -8,34 +7,14 @@ import { routePath } from "./middleware/auth";
 import { requestContextMiddleware } from "./middleware/request-context";
 import { v1 } from "./routes";
 
-const PUBLIC_DIR = join(import.meta.dir, "..", "public");
-const INDEX_HTML = join(PUBLIC_DIR, "index.html");
-
 export const app = express();
 
 app.disable("x-powered-by");
 app.use(requestContextMiddleware.handle());
 app.use("/v1", v1);
 
-app.use(express.static(PUBLIC_DIR));
-
-app.use(async (req: Request, res: Response) => {
-  const path = routePath(req);
-  if (path === "/v1" || path.startsWith("/v1/")) {
-    res.status(404).json({ error: "not_found" });
-    return;
-  }
-  const index = Bun.file(INDEX_HTML);
-  if (await index.exists()) {
-    res.type("html").send(await index.text());
-    return;
-  }
-  res
-    .status(404)
-    .type("text")
-    .send(
-      "Frontend build not found. Run `bun run --filter web build` and copy apps/web/dist into apps/api/public.",
-    );
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({ error: "not_found" });
 });
 
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
@@ -58,7 +37,7 @@ try {
 const port = config.getIntSync("PORT", 3000);
 
 const server = app.listen(port, () => {
-  logger.info({ port, public_dir: PUBLIC_DIR }, "api.listening");
+  logger.info({ port }, "api.listening");
 });
 server.headersTimeout = 65_000;
 server.requestTimeout = 0;

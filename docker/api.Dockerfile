@@ -17,9 +17,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=prisma /app ./
-RUN mkdir -p apps/api/public \
- && { bun run --filter web build && cp -r apps/web/dist/. apps/api/public/ ; } \
-    || echo "web build unavailable - shipping empty apps/api/public"
 ENV NODE_ENV=production
 EXPOSE 3000
 CMD ["bun", "run", "apps/api/src/server.ts"]
