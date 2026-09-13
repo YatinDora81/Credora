@@ -14,7 +14,7 @@ by which model output can set a decision.
 ## Run it
 
 ```bash
-cp .env.example .env          # add GEMINI_API_KEY (or GEMINI_API_KEYS) if you want live extraction
+cp .env.example .env          # add GEMINI_API_KEYS if you want live extraction
 docker compose up --build
 ```
 
