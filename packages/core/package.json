@@ -1,0 +1,17 @@
+{
+  "name": "@deepvue/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": { ".": "./src/index.ts", "./fixtures": "./src/fixtures.ts" },
+  "scripts": {
+    "build": "echo no-op",
+    "test": "bun test src"
+  },
+  "dependencies": {
+    "zod": "^3.23.8",
+    "yaml": "^2.6.1",
+    "@google/genai": "^1.0.0"
+  }
+}
