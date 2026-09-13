@@ -1,0 +1,16 @@
+{
+  "name": "@deepvue/platform",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "build": "echo no-op",
+    "test": "echo no tests"
+  },
+  "dependencies": {
+    "@deepvue/db": "workspace:*",
+    "pino": "^8.21.0"
+  }
+}
