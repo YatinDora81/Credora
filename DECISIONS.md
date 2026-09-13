@@ -97,6 +97,14 @@ a typo fails the deploy rather than one unlucky application at 3am. `requires` i
 rule 4 mechanical: the evaluator checks availability before a check ever runs, so a check
 function never handles null and can never mistake a missing input for a failing one.
 
+**Adding a customer is data.** Tapti Tradefin, Palar MSME Finance and Vamsadhara Co-operative
+Credit were added after the two brief customers with no engine change: one YAML file each built
+from checks already in the registry, a seed row with an API key, and an active-version key in the
+runtime config allowlist. Their postures differ in thresholds and in where failures route (Tapti
+rejects undisclosed units outright, Palar tolerates a 60% overstatement for young businesses,
+Vamsadhara sends every exception to its loan committee), and the same A.1 application comes out
+REJECTED, APPROVED and REVIEW across the three. A clean applicant (E.1) passes all six policies.
+
 **At 50 customers with 40-page policies,** hand-authored YAML stops scaling — not because the
 format breaks, but because the authors change. What is needed: an authoring UI where credit
 teams compose clauses from a registry of available checks rather than writing YAML; a lint and

@@ -38,7 +38,37 @@ That is the designed failure mode, not an error.
 |---|---|
 | Kaveri Capital API key | `dv_live_kaveri_7f3a9c2e` |
 | Nexa Finserv API key | `dv_live_nexa_4b8d1e6a` |
+| Tapti Tradefin API key | `dv_live_tapti_28145a1a` |
+| Palar MSME Finance API key | `dv_live_palar_7ec8a7b6` |
+| Vamsadhara Co-operative Credit API key | `dv_live_vamsadhara_d8c06574` |
 | Admin key (API + mock) | `dv_admin_local_only_change_me` |
+
+### Customers
+
+Kaveri Capital and Nexa Finserv come from the brief. The other three were added as policy data
+only (a YAML file, a seed row and an active-version key) to show that a new lender needs no
+engine change. All names are fictional.
+
+| Customer | Policy | Posture |
+|---|---|---|
+| Kaveri Capital | `kaveri_capital` 3.1, 3.2 | Conservative; 36 months (24 on 3.2); undetermined never rejects |
+| Nexa Finserv | `nexa_finserv` 1.4 | Growth lender; 12 months; decides on what is available, marks it degraded |
+| Tapti Tradefin | `tapti_tradefin` 2.0 | Strict trade lender; 24 months; returns within 60 days; undisclosed units are ineligible; excludes import/export |
+| Palar MSME Finance | `palar_msme` 1.1 | Inclusive MSME lender; 6 months; young businesses may overstate turnover by up to 60% |
+| Vamsadhara Co-operative Credit | `vamsadhara_coop` 1.0 | Member cooperative; every exception goes to the loan committee; rejects only excluded sectors |
+
+Expected outcomes with the registry and the model healthy (the console's scenario dropdown shows
+the same table for the selected customer):
+
+| Sample | Kaveri 3.1 | Kaveri 3.2 | Nexa 1.4 | Tapti 2.0 | Palar 1.1 | Vamsadhara 1.0 |
+|---|---|---|---|---|---|---|
+| A.1, A.2.1, A.2.2 | REJECTED | REVIEW | APPROVED | REJECTED | APPROVED | REVIEW |
+| A.2.3 | REJECTED | REJECTED | APPROVED | REJECTED | REJECTED | REJECTED |
+| A.2.4 | REJECTED | REVIEW | APPROVED | REVIEW | APPROVED | APPROVED |
+| E.1 | APPROVED | APPROVED | APPROVED | APPROVED | APPROVED | APPROVED |
+
+E.1 is not from the brief: a clean, well-established distributor whose facts pass every clause of
+every policy, so each customer has a case it approves.
 
 ---
 
@@ -92,12 +122,13 @@ curl -s 'localhost:3000/v1/applications?limit=100' \
   -H 'X-API-Key: dv_live_kaveri_7f3a9c2e' | jq -r '.items[] | "\(.status)\t\(.degraded)"' | sort | uniq -c
 ```
 
-### 4. Every Appendix A variant, under both policies
+### 4. Every Appendix A variant, under every policy
 
-The five fixtures are in the console's **Scenario** dropdown, grouped as baseline, adversarial
-and edge case, and each option shows the outcome to expect for the selected customer. They
-live in `packages/core/src/fixtures.ts`. Submit each under both customers and check the cited
-clause text against the policy YAML in `packages/core/src/policies/`.
+The five Appendix A fixtures, plus the clean E.1 applicant, are in the console's **Scenario**
+dropdown, grouped as baseline, clean approval, adversarial and edge case. Each option shows the
+outcome to expect for the selected customer. They live in `packages/core/src/fixtures.ts`. Submit
+each under Kaveri and Nexa (and the added customers if you like) and check the cited clause text
+against the policy YAML in `packages/core/src/policies/`, or on the console's **Policies** page.
 
 For deterministic output, turn the chaos off first (see §7 below).
 
