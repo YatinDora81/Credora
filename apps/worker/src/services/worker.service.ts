@@ -17,9 +17,28 @@ const MAX_INFLIGHT_BATCHES = 4;
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+export interface WorkerStats {
+  stopping: boolean;
+  inFlight: number;
+  lastLoopAt: number;
+  lastClaimFailed: boolean;
+  pollIntervalMs: number;
+}
+
 export class WorkerService {
   private stopping = false;
   private readonly inFlight = new Set<Promise<unknown>>();
+  private lastLoopAt = 0;
+  private lastClaimFailed = false;
+  private pollIntervalMs: number = DEFAULTS.WORKER_POLL_INTERVAL_MS;
+
+  stats = (): WorkerStats => ({
+    stopping: this.stopping,
+    inFlight: this.inFlight.size,
+    lastLoopAt: this.lastLoopAt,
+    lastClaimFailed: this.lastClaimFailed,
+    pollIntervalMs: this.pollIntervalMs,
+  });
 
   run = async (): Promise<void> => {
     await this.logStartup();
@@ -39,10 +58,12 @@ export class WorkerService {
 
   private claimLoop = async (): Promise<void> => {
     while (!this.stopping) {
+      this.lastLoopAt = Date.now();
       const pollIntervalMs = await config.getPositiveInt(
         "WORKER_POLL_INTERVAL_MS",
         DEFAULTS.WORKER_POLL_INTERVAL_MS,
       );
+      this.pollIntervalMs = pollIntervalMs;
       const batchSize = await config.getPositiveInt(
         "WORKER_BATCH_SIZE",
         DEFAULTS.WORKER_BATCH_SIZE,
@@ -57,7 +78,9 @@ export class WorkerService {
       let claimed = 0;
       try {
         claimed = await this.claimOnce(Math.min(batchSize, maxInFlight - this.inFlight.size));
+        this.lastClaimFailed = false;
       } catch (err) {
+        this.lastClaimFailed = true;
         logger.error({ event: "worker.claim_failed", error: errorText(err) });
       }
 

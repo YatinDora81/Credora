@@ -18,4 +18,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
  && rm -rf /var/lib/apt/lists/*
 COPY --from=prisma /app ./
 ENV NODE_ENV=production
+EXPOSE 4100
 CMD ["bun", "run", "apps/worker/src/main.ts"]

@@ -21,6 +21,8 @@ export const DEFAULTS: Record<string, string> = {
   WATCHDOG_INTERVAL_MS: "10000",
   WATCHDOG_STALE_MS: "120000",
   WORKER_MAX_ATTEMPTS: "3",
+  WORKER_PORT: "4100",
+  WORKER_BASE_URL: "http://worker:4100",
 
   UPSTREAM_BASE_URL: "http://mock-upstream:4000",
   UPSTREAM_TIMEOUT_MS: "4000",
