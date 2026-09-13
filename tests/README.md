@@ -190,6 +190,20 @@ still reaches a terminal state and the extraction-dependent clauses are `UNDETER
 
 ---
 
+## Beyond §28
+
+### `keepalive.test.ts` — service health and keep-alive
+
+The console keeps every process awake by calling `GET /v1/keepalive` every two seconds, so
+that endpoint has to stay cheap, public and truthful. The suite starts **without a worker**:
+the keep-alive answers `200` with no API key, reports `degraded` and marks the worker
+unreachable. It then starts the worker, checks the worker's own `GET /health` (and the mock's),
+waits for the roll-up to reach `ok`, fires a burst of twenty calls and asserts they share one
+downstream probe, stops the worker again and checks the roll-up notices. Keep-alive requests
+must never appear in the API log at `info`.
+
+---
+
 ## `helpers.ts` — the harness
 
 | What | How |
@@ -202,6 +216,8 @@ still reaches a terminal state and the extraction-dependent clauses are `UNDETER
 | `h.setConfig({...})` | `PUT /v1/admin/config` then waits out the 2s config cache (§4.1) |
 | `h.setMockRates({fail,hang,rateLimit})` | drives the mock's own `PUT /admin/config` |
 | `h.startWorker()` | blocks until the worker's first log line |
+| `h.stopWorker()` | stops only the worker; the queue and the other services keep running |
+| `h.keepalive()` / `h.workerUrl` | `GET /v1/keepalive`, and the worker's `/health` base URL |
 | `h.waitForTerminal(id, key, ms)` | polls until `APPROVED`/`REVIEW`/`REJECTED`/`FAILED` |
 | `h.apiLog()` / `h.workerLog()` / `h.jsonLogLines()` | the captured child stdout+stderr |
 | `h.stop()` | unconditional teardown; a `process.on("exit")` backstop catches the rest |

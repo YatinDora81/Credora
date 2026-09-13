@@ -194,8 +194,10 @@ export type HttpResult<T = any> = {
 export class Harness {
   readonly apiPort: number;
   readonly mockPort: number;
+  readonly workerPort: number;
   readonly apiUrl: string;
   readonly mockUrl: string;
+  readonly workerUrl: string;
 
   private api: Child | null = null;
   private worker: Child | null = null;
@@ -205,8 +207,10 @@ export class Harness {
   constructor(opts: HarnessOptions = {}) {
     this.apiPort = reservePort();
     this.mockPort = reservePort();
+    this.workerPort = reservePort();
     this.apiUrl = `http://127.0.0.1:${this.apiPort}`;
     this.mockUrl = `http://127.0.0.1:${this.mockPort}`;
+    this.workerUrl = `http://127.0.0.1:${this.workerPort}`;
     this.opts = {
       modelOutage: opts.modelOutage ?? true,
       startWorker: opts.startWorker ?? true,
@@ -222,6 +226,8 @@ export class Harness {
       ADMIN_KEY,
       PORT: String(this.apiPort),
       UPSTREAM_BASE_URL: this.mockUrl,
+      WORKER_PORT: String(this.workerPort),
+      WORKER_BASE_URL: this.workerUrl,
       MODEL_OUTAGE: String(this.opts.modelOutage),
       EXTRACTION_CACHE_ENABLED: "true",
       KAVERI_ACTIVE_POLICY_VERSION: "3.1",
@@ -285,6 +291,11 @@ export class Harness {
       await sleep(100);
     }
     throw new Error(`worker produced no log line within 40s:\n${this.worker.out.text()}`);
+  }
+
+  async stopWorker(): Promise<void> {
+    await killChild(this.worker);
+    this.worker = null;
   }
 
   async stop(): Promise<void> {
@@ -416,6 +427,10 @@ export class Harness {
 
   health(): Promise<HttpResult> {
     return this.request("GET", "/v1/health", {});
+  }
+
+  keepalive(): Promise<HttpResult> {
+    return this.request("GET", "/v1/keepalive", {});
   }
 
   admin(
