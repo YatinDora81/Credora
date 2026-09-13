@@ -1,0 +1,21 @@
+{
+  "application_id_external": "LN-2026-88213",
+  "applied_on": "2026-02-20",
+  "business": {
+    "legal_name": "Saraswati Traders Private Limited",
+    "pan": "AAFCS4321K",
+    "gstin": "29AAFCS4321K1ZP",
+    "registered_address": "No. 42, 3rd Cross, Peenya Industrial Area, Bengaluru 560058",
+    "declared_annual_turnover_inr": 14500000,
+    "sector": "wholesale_distribution"
+  },
+  "loan": {
+    "amount_inr": 2500000,
+    "tenure_months": 12,
+    "purpose": "working_capital"
+  },
+  "unstructured": {
+    "field_agent_note": "n/a",
+    "document_text": ""
+  }
+}

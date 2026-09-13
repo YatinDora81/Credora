@@ -1,0 +1,21 @@
+{
+  "application_id_external": "LN-2026-88213",
+  "applied_on": "2026-02-20",
+  "business": {
+    "legal_name": "Saraswati Traders Private Limited",
+    "pan": "AAFCS4321K",
+    "gstin": "29AAFCS4321K1ZP",
+    "registered_address": "No. 42, 3rd Cross, Peenya Industrial Area, Bengaluru 560058",
+    "declared_annual_turnover_inr": 14500000,
+    "sector": "wholesale_distribution"
+  },
+  "loan": {
+    "amount_inr": 2500000,
+    "tenure_months": 12,
+    "purpose": "working_capital"
+  },
+  "unstructured": {
+    "field_agent_note": "Visited premises on 14 Feb. Warehouse operational, roughly 8 staff on site. Owner says they've been running since 2021 though the signage is newer. Mentioned a second unit in Tumkur that isn't on the GST record. Books were shown on a laptop, not printed. Bank statements looked consistent with the turnover claimed. Slight hesitation when asked about the Tumkur unit.",
+    "document_text": "GOVERNMENT OF INDIA\nFORM GST REG-06\nGoods and Services Tax Registration Certificate\n\nRegistration Number (GSTIN): 29AAFCS4321K1ZP\nLegal Name: Saraswati Traders Private Limited\nTrade Name: Saraswati Traders\nConstitution of Business: Private Limited Company\nDate of Liability: 01 September 2023\nPrincipal Place of Business: No. 42, 3rd Cross, Peenya Industrial Area, Bengaluru 560058\nAdditional Places of Business: Nil\nNature of Business Activities: Wholesale of electronic goods; Trading in virtual digital assets; Import of consumer electronics\nStatus: Active\n\nThis is a system generated certificate."
+  }
+}
