@@ -1,0 +1,103 @@
+customer: palar_msme
+version: "1.1"
+cap_undetermined_at: REVIEW      # P10: anything that cannot be verified goes to a credit officer, never automatic REJECT
+clauses:
+  - id: P1
+    text: "Business must be incorporated at least 6 months before application date."
+    check: min_age_months
+    params: { months: 6 }
+    requires: [incorporation_date, applied_on]
+    on_fail: REJECT
+    on_undetermined: REVIEW
+
+  - id: P2
+    text: "GSTIN must be active."
+    check: gstin_active
+    params: {}
+    requires: [gstin_status]
+    on_fail: REJECT
+    on_undetermined: REVIEW
+
+  - id: P3             # 120 days lets quarterly (QRMP) filers qualify
+    text: "Returns must have been filed within the last 120 days (P2 separately requires an active GSTIN); a stale filing requires REVIEW."
+    check: gstin_active_and_filed_within
+    params: { days: 120 }
+    requires: [gstin_status, last_return_filed, applied_on]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: P4
+    text: "Declared turnover may exceed evidenced turnover by up to 60% for businesses under 36 months old; a larger overstatement requires REVIEW."
+    check: turnover_overstatement_within
+    params: { max_pct: 60, basis: evidenced_turnover }
+    requires: [declared_turnover, evidenced_turnover]
+    applies_when:
+      check: max_age_months
+      params: { months: 36 }
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: P5
+    text: "For businesses 36 months or older, declared turnover must be within 25% of turnover evidenced by verification sources; a wider gap requires REVIEW."
+    check: turnover_within_percent
+    params: { max_pct: 25, basis: evidenced_turnover }
+    requires: [declared_turnover, evidenced_turnover]
+    applies_when:
+      check: min_age_months
+      params: { months: 36 }
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: P6
+    text: "For businesses under 12 months old, loan amount must not exceed 15% of verified annual turnover."
+    check: loan_to_turnover_ratio
+    params: { max_pct: 15, basis: evidenced_turnover }
+    requires: [loan_amount, evidenced_turnover]
+    applies_when:
+      check: max_age_months
+      params: { months: 12 }
+    on_fail: REJECT
+    on_undetermined: REVIEW
+
+  - id: P7
+    text: "Loan amount must not exceed 25% of verified annual turnover."
+    check: loan_to_turnover_ratio
+    params: { max_pct: 25, basis: evidenced_turnover }
+    requires: [loan_amount, evidenced_turnover]
+    on_fail: REJECT
+    on_undetermined: REVIEW
+
+  - id: P8
+    text: "Any address mismatch between registration and operating premises requires REVIEW."
+    check: address_mismatch
+    params: {}
+    requires: [payload_registered_address, upstream_registered_address]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  # P9 never escalates on its own: any overstatement above 60% already fails P4 or P5 (REVIEW).
+  # It records that a unit alone is not a blocker. It is also the only clause that needs the
+  # extracted document facts, so with no extraction it is UNDETERMINED -> REVIEW (P10 posture).
+  - id: P9
+    text: "An undisclosed business unit noted during assessment requires REVIEW only when declared turnover also exceeds evidenced turnover by more than 60%."
+    check: undisclosed_units_with_overstatement
+    params: { max_pct: 60, basis: evidenced_turnover }
+    requires: [undisclosed_units, declared_turnover, evidenced_turnover]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: P10
+    text: "Failure to verify against the verification source requires REVIEW, never automatic REJECT."
+    check: verification_succeeded
+    params: {}
+    requires: [verification_succeeded]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: P11
+    text: "Sectors excluded entirely: crypto trading, gambling, unregistered lending."
+    check: sector_excluded
+    params: { excluded: [crypto_trading, gambling, unregistered_lending] }
+    requires: [all_sectors]
+    on_fail: REJECT
+    on_undetermined: REVIEW

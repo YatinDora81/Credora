@@ -1,0 +1,83 @@
+customer: tapti_tradefin
+version: "2.0"
+cap_undetermined_at: REVIEW      # T9: an unverified application goes to REVIEW; only a determined failure can REJECT
+clauses:
+  - id: T1             # at least one complete financial year (April-March) of GST returns on record
+    text: "Business must be incorporated at least 24 months before application date."
+    check: min_age_months
+    params: { months: 24 }
+    requires: [incorporation_date, applied_on]
+    on_fail: REJECT
+    on_undetermined: REVIEW
+
+  - id: T2             # needs only the status, so an unregistered (NOT_FOUND) GSTIN is a determined failure
+    text: "GSTIN must be active."
+    check: gstin_active
+    params: {}
+    requires: [gstin_status]
+    on_fail: REJECT
+    on_undetermined: REVIEW
+
+  - id: T3             # 60 days assumes monthly GSTR-3B filing; a quarterly (QRMP) filer can fail late in a quarter
+    text: "The programme lends to monthly GSTR-3B filers: a GST return must have been filed within the last 60 days (T2 separately requires an active GSTIN)."
+    check: gstin_active_and_filed_within
+    params: { days: 60 }
+    requires: [gstin_status, last_return_filed, applied_on]
+    on_fail: REJECT
+    on_undetermined: REVIEW
+
+  - id: T4
+    text: "Declared turnover must be within 20% of turnover evidenced by verification sources; a wider gap requires REVIEW."
+    check: turnover_within_percent
+    params: { max_pct: 20, basis: evidenced_turnover }
+    requires: [declared_turnover, evidenced_turnover]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: T5             # turnover-method limit: above 20% the limit is assessed on a cash budget by credit
+    text: "Loan amount above 20% of verified annual turnover requires REVIEW."
+    check: loan_to_turnover_ratio
+    params: { max_pct: 20, basis: evidenced_turnover }
+    requires: [loan_amount, evidenced_turnover]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: T6             # hard ceiling: 25% of turnover is the whole working-capital requirement
+    text: "Loan amount must not exceed 25% of verified annual turnover."
+    check: loan_to_turnover_ratio
+    params: { max_pct: 25, basis: evidenced_turnover }
+    requires: [loan_amount, evidenced_turnover]
+    on_fail: REJECT
+    on_undetermined: REVIEW
+
+  - id: T7
+    text: "Any address mismatch between registration and operating premises requires REVIEW."
+    check: address_mismatch
+    params: {}
+    requires: [payload_registered_address, upstream_registered_address]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: T8             # limits are set only against premises on the GST registration; decided from the documents, so it also REJECTs while the registry is down
+    text: "Any undisclosed business unit or entity noted during assessment makes the application ineligible."
+    check: undisclosed_units_present
+    params: {}
+    requires: [undisclosed_units]
+    on_fail: REJECT
+    on_undetermined: REVIEW
+
+  - id: T9
+    text: "Failure to verify against the verification source requires REVIEW, never automatic REJECT."
+    check: verification_succeeded
+    params: {}
+    requires: [verification_succeeded]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: T10            # domestic trade programme: cross-border receivables are out of scope
+    text: "Sectors excluded entirely: crypto trading, gambling, unregistered lending, import/export."
+    check: sector_excluded
+    params: { excluded: [crypto_trading, gambling, unregistered_lending, import_export] }
+    requires: [all_sectors]
+    on_fail: REJECT
+    on_undetermined: REVIEW

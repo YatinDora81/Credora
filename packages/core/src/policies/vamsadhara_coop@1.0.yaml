@@ -1,0 +1,67 @@
+customer: vamsadhara_coop
+version: "1.0"
+cap_undetermined_at: REVIEW      # every exception goes to the loan committee; only V8 can REJECT
+clauses:
+  - id: V1
+    text: "Business must be incorporated at least 24 months before application date; a younger business requires REVIEW by the loan committee."
+    check: min_age_months
+    params: { months: 24 }
+    requires: [incorporation_date, applied_on]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: V2
+    text: "GSTIN must be active and returns filed within the last 90 days; otherwise the application requires REVIEW by the loan committee."
+    check: gstin_active_and_filed_within
+    params: { days: 90 }
+    requires: [gstin_status, last_return_filed, applied_on]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: V3
+    text: "Declared turnover must be within 50% of turnover evidenced by verification sources; a wider gap requires REVIEW by the loan committee."
+    check: turnover_within_percent
+    params: { max_pct: 50, basis: evidenced_turnover }
+    requires: [declared_turnover, evidenced_turnover]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: V4
+    text: "Loan amount must not exceed 30% of verified annual turnover; a larger loan requires REVIEW by the loan committee."
+    check: loan_to_turnover_ratio
+    params: { max_pct: 30, basis: evidenced_turnover }
+    requires: [loan_amount, evidenced_turnover]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: V5
+    text: "Any address mismatch between registration and operating premises requires REVIEW by the loan committee."
+    check: address_mismatch
+    params: {}
+    requires: [payload_registered_address, upstream_registered_address]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: V6
+    text: "Any undisclosed business unit or entity noted during assessment requires REVIEW by the loan committee."
+    check: undisclosed_units_present
+    params: {}
+    requires: [undisclosed_units]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: V7
+    text: "Failure to verify against the verification source requires REVIEW by the loan committee, never automatic REJECT."
+    check: verification_succeeded
+    params: {}
+    requires: [verification_succeeded]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: V8
+    text: "Sectors excluded entirely: crypto trading, gambling, unregistered lending."
+    check: sector_excluded
+    params: { excluded: [crypto_trading, gambling, unregistered_lending] }
+    requires: [all_sectors]
+    on_fail: REJECT
+    on_undetermined: REVIEW

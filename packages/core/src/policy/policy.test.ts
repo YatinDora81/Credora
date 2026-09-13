@@ -3,7 +3,7 @@ import { rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { SAMPLE_A1, UPSTREAM_A1 } from "../fixtures";
+import { SAMPLE_A1, SAMPLE_E1, UPSTREAM_A1, UPSTREAM_E1 } from "../fixtures";
 import type { ClauseResult, ClauseResultKind, Evidence, Fact, FactSource } from "../types";
 import { aggregate } from "./aggregate";
 import { compareAddresses } from "./checks";
@@ -117,13 +117,20 @@ function expectResults(
 const KAVERI_31 = ["kaveri_capital", "3.1"] as const;
 const KAVERI_32 = ["kaveri_capital", "3.2"] as const;
 const NEXA_14 = ["nexa_finserv", "1.4"] as const;
+const PALAR_11 = ["palar_msme", "1.1"] as const;
+const TAPTI_20 = ["tapti_tradefin", "2.0"] as const;
+const VAMSADHARA_10 = ["vamsadhara_coop", "1.0"] as const;
+const ALL_POLICIES = [KAVERI_31, KAVERI_32, NEXA_14, PALAR_11, TAPTI_20, VAMSADHARA_10] as const;
 
 describe("loader", () => {
-  test("lists the three shipped policies", () => {
+  test("lists the six shipped policies", () => {
     expect(listPolicies()).toEqual([
       { customer: "kaveri_capital", version: "3.1" },
       { customer: "kaveri_capital", version: "3.2" },
       { customer: "nexa_finserv", version: "1.4" },
+      { customer: "palar_msme", version: "1.1" },
+      { customer: "tapti_tradefin", version: "2.0" },
+      { customer: "vamsadhara_coop", version: "1.0" },
     ]);
   });
 
@@ -133,11 +140,14 @@ describe("loader", () => {
     expect(policyExists("no_such_customer", "1.0")).toBe(false);
   });
 
-  test("validateAllPolicies loads all three without throwing", () => {
+  test("validateAllPolicies loads all six without throwing", () => {
     expect(validateAllPolicies().map((p) => `${p.customer}@${p.version}`)).toEqual([
       "kaveri_capital@3.1",
       "kaveri_capital@3.2",
       "nexa_finserv@1.4",
+      "palar_msme@1.1",
+      "tapti_tradefin@2.0",
+      "vamsadhara_coop@1.0",
     ]);
   });
 
@@ -734,5 +744,133 @@ describe("address_mismatch tolerates a fragment of the same address", () => {
     expect(compareAddresses(REGISTERED, "second godown in Tumkur").mismatch).toBe(true);
     expect(compareAddresses(REGISTERED, "Tumkur").mismatch).toBe(true);
     expect(compareAddresses(REGISTERED, "Whitefield, Bengaluru 560066").mismatch).toBe(true);
+  });
+});
+
+describe("E.1: clean, well-established applicant", () => {
+  function evidenceE1(overrides: Evidence = {}): Evidence {
+    return {
+      applied_on: fact(SAMPLE_E1.applied_on, "payload", "applied_on"),
+      loan_amount: fact(SAMPLE_E1.loan.amount_inr, "payload", "loan.amount_inr"),
+      declared_turnover: fact(
+        SAMPLE_E1.business.declared_annual_turnover_inr,
+        "payload",
+        "business.declared_annual_turnover_inr",
+      ),
+      payload_registered_address: fact(
+        SAMPLE_E1.business.registered_address,
+        "payload",
+        "business.registered_address",
+      ),
+      declared_sectors: fact(["wholesale_distribution"], "payload", "business.sector"),
+      gstin_status: fact(UPSTREAM_E1.status, "upstream", "upstream:status"),
+      incorporation_date: fact(UPSTREAM_E1.incorporation_date, "upstream", "upstream:incorporation_date"),
+      last_return_filed: fact(UPSTREAM_E1.last_return_filed_on, "upstream", "upstream:last_return_filed_on"),
+      evidenced_turnover: fact(
+        UPSTREAM_E1.filings_annual_turnover_inr,
+        "upstream",
+        "upstream:filings_annual_turnover_inr",
+      ),
+      upstream_registered_address: fact(
+        UPSTREAM_E1.registered_address,
+        "upstream",
+        "upstream:registered_address",
+      ),
+      operating_address: fact(
+        UPSTREAM_E1.registered_address,
+        "extraction",
+        "Principal Place of Business: Unit 12, Sahyadri Trade Centre, Market Yard Road, Gultekdi, Pune 411037",
+      ),
+      undisclosed_units: fact([], "extraction", "derived:no_units_found"),
+      extracted_sectors: fact(
+        ["wholesale_distribution"],
+        "extraction",
+        "Nature of Business Activities: Wholesale of packaged foods and home care products; Warehouse / Depot",
+      ),
+      verification_succeeded: fact(true, "derived", "derived:upstream_responded"),
+      all_sectors: fact(["wholesale_distribution"], "derived", "derived:all_sectors"),
+      ...overrides,
+    };
+  }
+
+  for (const [customer, version] of ALL_POLICIES) {
+    test(`${customer}@${version} -> APPROVED with no failed or undetermined clause`, () => {
+      const { results, summary } = decide(evidenceE1(), customer, version);
+      expect(results.filter((r) => r.result === "FAIL" || r.result === "UNDETERMINED")).toEqual([]);
+      expect(summary.outcome).toBe("APPROVED");
+      expect(summary.degraded).toBe(false);
+    });
+  }
+
+  test("model outage: only the undisclosed-units input is missing", () => {
+    const outage = evidenceE1({
+      operating_address: UNAVAILABLE,
+      undisclosed_units: UNAVAILABLE,
+      extracted_sectors: UNAVAILABLE,
+    });
+    const outcomes = Object.fromEntries(
+      ALL_POLICIES.map(([c, v]) => [`${c}@${v}`, decide(outage, c, v).summary.outcome]),
+    );
+    expect(outcomes).toEqual({
+      "kaveri_capital@3.1": "REVIEW",
+      "kaveri_capital@3.2": "REVIEW",
+      "nexa_finserv@1.4": "APPROVED",
+      "palar_msme@1.1": "REVIEW",
+      "tapti_tradefin@2.0": "REVIEW",
+      "vamsadhara_coop@1.0": "REVIEW",
+    });
+  });
+});
+
+describe("added customers on the Appendix A samples", () => {
+  test("A.1: Palar approves, Tapti rejects on the undisclosed unit, Vamsadhara sends it to committee", () => {
+    const palar = decide(evidenceA1(), ...PALAR_11);
+    expect(palar.byId.P4!.result).toBe("PASS");
+    expect(palar.byId.P5!.result).toBe("NOT_APPLICABLE");
+    expect(palar.summary.outcome).toBe("APPROVED");
+
+    const tapti = decide(evidenceA1(), ...TAPTI_20);
+    expect(tapti.byId.T8!.result).toBe("FAIL");
+    expect(tapti.byId.T8!.outcome).toBe("REJECT");
+    expect(tapti.summary.outcome).toBe("REJECTED");
+
+    const vamsadhara = decide(evidenceA1(), ...VAMSADHARA_10);
+    expect(vamsadhara.byId.V6!.result).toBe("FAIL");
+    expect(vamsadhara.summary.outcome).toBe("REVIEW");
+  });
+
+  test("A.2.3: every added customer excludes crypto trading", () => {
+    const crypto = evidenceA1({
+      all_sectors: fact(["wholesale_distribution", "crypto_trading"], "derived", "derived:all_sectors"),
+    });
+    expect(decide(crypto, ...PALAR_11).byId.P11!.result).toBe("FAIL");
+    expect(decide(crypto, ...TAPTI_20).byId.T10!.result).toBe("FAIL");
+    expect(decide(crypto, ...VAMSADHARA_10).byId.V8!.result).toBe("FAIL");
+    for (const policy of [PALAR_11, TAPTI_20, VAMSADHARA_10]) {
+      expect(decide(crypto, ...policy).summary.outcome).toBe("REJECTED");
+    }
+  });
+
+  test("A.2.4: nothing extracted leaves Tapti on the turnover gap and approves the others", () => {
+    const empty = evidenceA1({
+      operating_address: UNAVAILABLE,
+      undisclosed_units: fact([], "extraction", "derived:no_units_found"),
+      extracted_sectors: fact([], "extraction", "derived:no_sectors_found"),
+    });
+    expect(decide(empty, ...PALAR_11).summary.outcome).toBe("APPROVED");
+    expect(decide(empty, ...VAMSADHARA_10).summary.outcome).toBe("APPROVED");
+    const tapti = decide(empty, ...TAPTI_20);
+    expect(tapti.byId.T4!.result).toBe("FAIL");
+    expect(tapti.byId.T5!.result).toBe("FAIL");
+    expect(tapti.summary.outcome).toBe("REVIEW");
+  });
+
+  test("an undetermined clause never rejects for the added customers", () => {
+    for (const policy of [PALAR_11, TAPTI_20, VAMSADHARA_10]) {
+      const { results, summary } = decide(evidenceModelOutage(), ...policy);
+      expect(results.some((r) => r.result === "UNDETERMINED")).toBe(true);
+      expect(summary.outcome).toBe("REVIEW");
+      expect(summary.degraded).toBe(true);
+    }
   });
 });
