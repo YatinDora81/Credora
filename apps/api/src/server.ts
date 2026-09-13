@@ -4,12 +4,14 @@ import { prisma } from "@deepvue/db";
 import { validateAllPolicies } from "@deepvue/core";
 import { config, logger } from "@deepvue/platform";
 import { routePath } from "./middleware/auth";
+import { corsMiddleware } from "./middleware/cors";
 import { requestContextMiddleware } from "./middleware/request-context";
 import { v1 } from "./routes";
 
 export const app = express();
 
 app.disable("x-powered-by");
+app.use(corsMiddleware.handle());
 app.use(requestContextMiddleware.handle());
 app.use("/v1", v1);
 
@@ -37,7 +39,7 @@ try {
 const port = config.getIntSync("PORT", 3000);
 
 const server = app.listen(port, () => {
-  logger.info({ port }, "api.listening");
+  logger.info({ port, cors_origins: config.getSync("CORS_ORIGINS") ?? null }, "api.listening");
 });
 server.headersTimeout = 65_000;
 server.requestTimeout = 0;
