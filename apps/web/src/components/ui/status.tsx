@@ -4,6 +4,7 @@ import type {
   ApplicationStatus,
   ClauseOutcome,
   ClauseResultKind,
+  ServiceLiveness,
   UpstreamCallOutcome,
 } from "@/api";
 
@@ -79,4 +80,23 @@ export function CircuitBadge({ circuit }: { circuit: string }) {
   const tone: Tone =
     circuit === "CLOSED" ? "green" : circuit === "OPEN" ? "red" : "amber";
   return <Badge tone={tone}>{circuit}</Badge>;
+}
+
+export function ServiceBadge({
+  label,
+  liveness,
+}: {
+  label: string;
+  liveness: ServiceLiveness | null;
+}) {
+  if (!liveness) return <Badge tone="neutral">{label} …</Badge>;
+  const tone: Tone = !liveness.reachable ? "red" : liveness.status === "ok" ? "green" : "amber";
+  const detail = liveness.reachable
+    ? `${liveness.status ?? "unknown"}${liveness.latency_ms != null ? ` · ${liveness.latency_ms}ms` : ""}`
+    : liveness.error || "unreachable";
+  return (
+    <Badge tone={tone} title={detail}>
+      {label}
+    </Badge>
+  );
 }

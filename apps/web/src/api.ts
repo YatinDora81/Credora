@@ -132,6 +132,21 @@ export interface HealthResponse {
   };
 }
 
+export type ServiceName = "api" | "worker" | "mock_upstream";
+
+export interface ServiceLiveness {
+  reachable: boolean;
+  status: string | null;
+  latency_ms: number | null;
+  error: string | null;
+}
+
+export interface KeepaliveResponse {
+  status: "ok" | "degraded" | string;
+  checked_at: string;
+  services: Record<ServiceName, ServiceLiveness>;
+}
+
 export interface ZodIssueView {
   path?: (string | number)[];
   message?: string;
@@ -240,4 +255,8 @@ export function getApplication(apiKey: string, id: string): Promise<ApplicationD
 
 export function getHealth(): Promise<HealthResponse> {
   return request<HealthResponse>("/v1/health");
+}
+
+export function keepalive(): Promise<KeepaliveResponse> {
+  return request<KeepaliveResponse>("/v1/keepalive", { cache: "no-store" });
 }

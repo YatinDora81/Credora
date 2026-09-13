@@ -1,21 +1,26 @@
 import * as React from "react";
-import { Activity, Cpu, Moon, Sun, Database, Layers } from "lucide-react";
+import { Activity, Cpu, Moon, Sun, Database, Layers, Server } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CircuitBadge } from "@/components/ui/status";
+import { CircuitBadge, ServiceBadge } from "@/components/ui/status";
 import { ApplicationList } from "@/components/ApplicationList";
 import { DecisionView } from "@/components/DecisionView";
 import { CUSTOMERS, SubmitPanel } from "@/components/SubmitPanel";
 import {
   ApiError,
   getHealth,
+  keepalive,
   listApplications,
   type ApplicationListItem,
   type HealthResponse,
+  type KeepaliveResponse,
 } from "@/api";
 
 const LIST_POLL_MS = 2000;
 const HEALTH_POLL_MS = 5000;
+const KEEPALIVE_MS = 2000;
+
+type ServiceMap = Partial<KeepaliveResponse["services"]>;
 
 export default function App() {
   const [apiKey, setApiKey] = React.useState<string>(CUSTOMERS[0].apiKey);
@@ -26,6 +31,7 @@ export default function App() {
   const [listLoading, setListLoading] = React.useState(false);
   const [health, setHealth] = React.useState<HealthResponse | null>(null);
   const [healthError, setHealthError] = React.useState<string | null>(null);
+  const [services, setServices] = React.useState<ServiceMap | null>(null);
   const [dark, setDark] = React.useState(true);
 
   React.useEffect(() => {
@@ -106,10 +112,39 @@ export default function App() {
     };
   }, []);
 
+  React.useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    async function ping() {
+      try {
+        const k = await keepalive();
+        if (!cancelled) setServices(k.services);
+      } catch (e) {
+        if (!cancelled) {
+          const error =
+            e instanceof ApiError
+              ? (e.body?.error ?? (e.status ? `http_${e.status}` : "network_error"))
+              : String(e);
+          setServices((prev) => ({
+            ...prev,
+            api: { reachable: false, status: null, latency_ms: null, error },
+          }));
+        }
+      }
+      if (!cancelled) timer = setTimeout(ping, KEEPALIVE_MS);
+    }
+    void ping();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <HealthStrip
         health={health}
+        services={services}
         error={healthError}
         dark={dark}
         onToggleTheme={() => setDark((d) => !d)}
@@ -145,11 +180,13 @@ export default function App() {
 
 function HealthStrip({
   health,
+  services,
   error,
   dark,
   onToggleTheme,
 }: {
   health: HealthResponse | null;
+  services: ServiceMap | null;
   error: string | null;
   dark: boolean;
   onToggleTheme: () => void;
@@ -204,6 +241,14 @@ function HealthStrip({
             </span>
           </>
         )}
+
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Server className="h-3.5 w-3.5" />
+          services
+          <ServiceBadge label="api" liveness={services?.api ?? null} />
+          <ServiceBadge label="worker" liveness={services?.worker ?? null} />
+          <ServiceBadge label="mock" liveness={services?.mock_upstream ?? null} />
+        </span>
 
         <Button
           variant="ghost"
