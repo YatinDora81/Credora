@@ -11,7 +11,7 @@ declare global {
   }
 }
 
-const PUBLIC_PATHS = new Set(["/v1/health"]);
+const PUBLIC_PATHS = new Set(["/v1/health", "/v1/keepalive"]);
 const PUBLIC_PREFIXES = ["/v1/admin"];
 
 function isPublic(path: string): boolean {

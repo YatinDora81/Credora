@@ -11,6 +11,7 @@ v1.use(text({ type: () => true, limit: "2mb" }));
 v1.use(authMiddleware.apiKey());
 
 v1.get("/health", healthController.show);
+v1.get("/keepalive", healthController.keepalive);
 
 v1.use("/admin", adminAuthMiddleware.guard());
 v1.get("/admin/config", adminController.show);

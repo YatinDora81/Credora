@@ -2,6 +2,8 @@ import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { logger, newRequestId, withContext } from "@deepvue/platform";
 import { routePath } from "./auth";
 
+const QUIET_PATHS = new Set(["/v1/health", "/v1/keepalive"]);
+
 export class RequestContextMiddleware {
   handle = (): RequestHandler => (req: Request, res: Response, next: NextFunction) => {
     const requestId = req.header("X-Request-Id")?.trim() || newRequestId();
@@ -17,7 +19,7 @@ export class RequestContextMiddleware {
           status: res.statusCode,
           duration_ms: Date.now() - started,
         };
-        if (path === "/v1/health") logger.debug(line, "http.request");
+        if (QUIET_PATHS.has(path)) logger.debug(line, "http.request");
         else logger.info(line, "http.request");
       });
     });
