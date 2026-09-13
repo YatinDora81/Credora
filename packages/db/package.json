@@ -1,0 +1,25 @@
+{
+  "name": "@deepvue/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "bun run src/seed.ts",
+    "build": "echo no-op",
+    "test": "echo no tests"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.10.0",
+    "@prisma/adapter-pg": "^7.10.0"
+  },
+  "devDependencies": {
+    "prisma": "^7.10.0"
+  }
+}

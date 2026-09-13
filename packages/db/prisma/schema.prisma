@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ApplicationStatus {
+  PENDING
+  PROCESSING
+  APPROVED
+  REVIEW
+  REJECTED
+  FAILED
+}
+
+model Customer {
+  id                String        @id
+  name              String
+  apiKey            String        @unique
+  policyCustomerKey String
+  activeVersionEnv  String
+  fallbackVersion   String
+  applications      Application[]
+}
+
+model Application {
+  id                String            @id @default(uuid())
+  customerId        String
+  customer          Customer          @relation(fields: [customerId], references: [id])
+
+  externalId        String?
+  appliedOn         DateTime          @db.Date
+  payload           Json
+
+  status            ApplicationStatus @default(PENDING)
+  attempts          Int               @default(0)
+  claimedAt         DateTime?
+  deadlineAt        DateTime
+
+  policyCustomerKey String
+  policyVersion     String
+
+  evidence          Json?
+  extraction        Json?
+  decision          Json?
+  degraded          Boolean           @default(false)
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  upstreamCalls     UpstreamCall[]
+
+  @@index([customerId, createdAt(sort: Desc)])
+  @@index([status, createdAt])
+}
+
+model IdempotencyRecord {
+  id            String   @id @default(uuid())
+  customerId    String
+  key           String
+  requestHash   String
+  applicationId String
+  createdAt     DateTime @default(now())
+
+  @@unique([customerId, key])
+}
+
+model UpstreamCall {
+  id            String      @id @default(uuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+  attempt       Int
+  startedAt     DateTime
+  durationMs    Int
+  outcome       String
+  statusCode    Int?
+  retryAfterSec Int?
+  error         String?
+
+  @@index([applicationId])
+}
+
+model UpstreamState {
+  id                  String    @id @default("upstream")
+  circuit             String    @default("CLOSED")
+  consecutiveFailures Int       @default(0)
+  openedAt            DateTime?
+  lastSuccessAt       DateTime?
+  lastFailureAt       DateTime?
+  lastError           String?
+  updatedAt           DateTime  @updatedAt
+}
+
+model RuntimeConfig {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model ExtractionCache {
+  inputHash  String   @id
+  model      String
+  extraction Json
+  createdAt  DateTime @default(now())
+}
