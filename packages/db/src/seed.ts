@@ -17,6 +17,30 @@ const CUSTOMERS = [
     activeVersionEnv: "NEXA_ACTIVE_POLICY_VERSION",
     fallbackVersion: "1.4",
   },
+  {
+    id: "tapti",
+    name: "Tapti Tradefin",
+    apiKey: "dv_live_tapti_28145a1a",
+    policyCustomerKey: "tapti_tradefin",
+    activeVersionEnv: "TAPTI_ACTIVE_POLICY_VERSION",
+    fallbackVersion: "2.0",
+  },
+  {
+    id: "palar",
+    name: "Palar MSME Finance",
+    apiKey: "dv_live_palar_7ec8a7b6",
+    policyCustomerKey: "palar_msme",
+    activeVersionEnv: "PALAR_ACTIVE_POLICY_VERSION",
+    fallbackVersion: "1.1",
+  },
+  {
+    id: "vamsadhara",
+    name: "Vamsadhara Co-operative Credit",
+    apiKey: "dv_live_vamsadhara_d8c06574",
+    policyCustomerKey: "vamsadhara_coop",
+    activeVersionEnv: "VAMSADHARA_ACTIVE_POLICY_VERSION",
+    fallbackVersion: "1.0",
+  },
 ] as const;
 
 async function main(): Promise<void> {
