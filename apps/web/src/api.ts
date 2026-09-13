@@ -225,6 +225,9 @@ export class ApiError extends Error {
   }
 }
 
+// Empty in dev: requests stay same-origin and Vite proxies /v1 to the local API.
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
+
 async function parse(res: Response): Promise<{ body: unknown; raw: string }> {
   const raw = await res.text();
   if (!raw) return { body: null, raw: "" };
@@ -249,7 +252,7 @@ async function requestWithStatus<T>(
 
   let res: Response;
   try {
-    res = await fetch(path, { ...rest, headers: h });
+    res = await fetch(`${API_BASE_URL}${path}`, { ...rest, headers: h });
   } catch (e) {
     throw new ApiError(0, { error: "network_error", message: String(e) }, String(e));
   }
