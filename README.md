@@ -20,13 +20,24 @@ docker compose up --build
 
 | Service | URL |
 |---|---|
-| API + UI | http://localhost:3000 |
+| API | http://localhost:3000 |
 | Mock registry | http://localhost:4000 |
 | Worker health | http://localhost:4100/health |
 | Postgres | localhost:5432 (`deepvue` / `deepvue`) |
 
-Open http://localhost:3000 for the one-page console: submit a fixture, watch it decide, and
-read the clause-by-clause reasoning.
+The console is not served by the API. Run it with `bun run --filter web dev` and open
+http://localhost:5173: submit a fixture, watch it decide, and read the clause-by-clause
+reasoning. Vite proxies `/v1` to the API on port 3000.
+
+### Deploying the console separately
+
+`apps/web` is a static Vite build meant for Vercel (`apps/web/vercel.json`). Set the project's
+root directory to `apps/web` and set `VITE_API_BASE_URL` to the API's public URL (no trailing
+slash). It is read at build time, so redeploy after changing it.
+
+On the API, set `CORS_ORIGINS` to a comma-separated list of origins allowed to call it, e.g.
+`https://deepvue.vercel.app,https://*.vercel.app`. `*.` matches subdomains (useful for preview
+deployments) and `*` allows any origin. It defaults to `http://localhost:5173`.
 
 Without a Gemini key the system still runs end to end — extraction is reported unavailable,
 extraction-dependent clauses come back `UNDETERMINED`, and the decision is marked `degraded`.
@@ -260,7 +271,7 @@ packages/platform   logger (with the PII masking), runtime config and request co
 packages/db         owns Prisma 7: schema, migrations, seed, client (pg driver adapter) and
                     the repository layer, including the SKIP LOCKED claim query
 apps/api            HTTP: controllers → services → repositories. Writes a row and returns;
-                    no slow work in the request path. Also serves the built UI
+                    no slow work in the request path. JSON only; the UI is deployed separately
 apps/worker         claims from the outbox, runs the pipeline services, writes decisions
 apps/mock-upstream  a registry that deliberately hangs, resets and rate-limits
 apps/web            the one-page console
