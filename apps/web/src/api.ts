@@ -134,6 +134,44 @@ export interface HealthResponse {
   };
 }
 
+export interface PolicyClause {
+  id: string;
+  text: string;
+  check: string;
+  params: Record<string, unknown>;
+  requires: string[];
+  applies_when?: { check: string; params: Record<string, unknown> };
+  on_fail: ClauseOutcome;
+  on_undetermined: ClauseOutcome;
+}
+
+export interface PolicyDocument {
+  customer: string;
+  version: string;
+  extends?: string;
+  cap_undetermined_at?: ClauseOutcome;
+  mark_degraded_only?: boolean;
+  clauses: PolicyClause[];
+}
+
+export interface PolicyVersionView {
+  version: string;
+  active: boolean;
+  extends: string | null;
+  changed_clauses: string[];
+  policy_hash: string;
+  policy: PolicyDocument;
+}
+
+export interface PolicyCatalog {
+  customer: { id: string; name: string; policy_key: string };
+  active_version: string;
+  active_version_key: string;
+  active_version_source: "db" | "env" | "default" | "fallback";
+  active_version_available: boolean;
+  versions: PolicyVersionView[];
+}
+
 export type ServiceName = "api" | "worker" | "mock_upstream";
 
 export interface ServiceLiveness {
@@ -263,6 +301,10 @@ export function getApplication(apiKey: string, id: string): Promise<ApplicationD
   return request<ApplicationDetail>(`/v1/applications/${encodeURIComponent(id)}`, {
     apiKey,
   });
+}
+
+export function getPolicies(apiKey: string): Promise<PolicyCatalog> {
+  return request<PolicyCatalog>("/v1/policies", { apiKey, cache: "no-store" });
 }
 
 export function getHealth(): Promise<HealthResponse> {

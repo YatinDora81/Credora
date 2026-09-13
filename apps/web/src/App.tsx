@@ -3,6 +3,7 @@ import { AppHeader, type ServiceMap } from "@/components/AppHeader";
 import { ApplicationList } from "@/components/ApplicationList";
 import { Composer, type SubmitResult } from "@/components/Composer";
 import { DecisionView } from "@/components/DecisionView";
+import { PoliciesPage } from "@/components/PoliciesPage";
 import {
   ApiError,
   getHealth,
@@ -20,11 +21,31 @@ const HEALTH_POLL_MS = 5000;
 const KEEPALIVE_MS = 2000;
 const THEME_KEY = "deepvue.theme";
 
+export type Route = "console" | "policies";
+
+function readRoute(): Route {
+  return window.location.hash.replace(/^#\/?/, "").split(/[?/]/)[0] === "policies" ? "policies" : "console";
+}
+
+function useRoute(): Route {
+  const [route, setRoute] = React.useState<Route>(readRoute);
+  React.useEffect(() => {
+    const onChange = () => setRoute(readRoute());
+    window.addEventListener("hashchange", onChange);
+    return () => window.removeEventListener("hashchange", onChange);
+  }, []);
+  React.useEffect(() => {
+    document.title = route === "policies" ? "Policies · Deepvue" : "Deepvue · Decisioning console";
+  }, [route]);
+  return route;
+}
+
 function readTheme(): boolean {
   return document.documentElement.classList.contains("dark");
 }
 
 export default function App() {
+  const route = useRoute();
   const [apiKey, setApiKey] = React.useState<string>(CUSTOMERS[0]!.apiKey);
   const [items, setItems] = React.useState<ApplicationListItem[]>([]);
   const [optimistic, setOptimistic] = React.useState<ApplicationListItem[]>([]);
@@ -212,8 +233,19 @@ export default function App() {
         healthError={healthError}
         dark={dark}
         onToggleTheme={toggleTheme}
+        route={route}
       />
-      <div className="flex-1 lg:grid lg:min-h-0 lg:grid-cols-[400px_minmax(0,1fr)] xl:grid-cols-[440px_minmax(0,1fr)]">
+      {route === "policies" ? (
+        <div className="flex-1 lg:min-h-0">
+          <PoliciesPage />
+        </div>
+      ) : null}
+      <div
+        className={cn(
+          "flex-1 lg:grid lg:min-h-0 lg:grid-cols-[400px_minmax(0,1fr)] xl:grid-cols-[440px_minmax(0,1fr)]",
+          route !== "console" && "!hidden",
+        )}
+      >
         <aside className="border-b lg:flex lg:min-h-0 lg:flex-col lg:overflow-hidden lg:border-b-0 lg:border-r">
           <div className="scrollbar-thin lg:max-h-[58%] lg:shrink-0 lg:overflow-y-auto">
             <Composer apiKey={apiKey} onApiKeyChange={setApiKey} onSubmitted={handleSubmitted} />

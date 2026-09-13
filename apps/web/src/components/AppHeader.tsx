@@ -4,6 +4,7 @@ import { Dot, type Tone } from "@/components/ui/status";
 import { label, EXTRACTION_REASON_LABEL, humanize } from "@/lib/labels";
 import { cn, formatMs } from "@/lib/utils";
 import type { HealthResponse, KeepaliveResponse, ServiceLiveness } from "@/api";
+import type { Route } from "@/App";
 
 export type ServiceMap = Partial<KeepaliveResponse["services"]>;
 
@@ -80,12 +81,14 @@ export function AppHeader({
   healthError,
   dark,
   onToggleTheme,
+  route,
 }: {
   services: ServiceMap | null;
   health: HealthResponse | null;
   healthError: string | null;
   dark: boolean;
   onToggleTheme: () => void;
+  route: Route;
 }) {
   const issues = collectIssues(services, health, healthError);
   const checking = !services && !health;
@@ -103,9 +106,28 @@ export function AppHeader({
       <div className="flex min-w-0 items-center gap-2">
         <Logo />
         <span className="text-14 font-semibold">Deepvue</span>
-        <span className="hidden text-14 text-faint sm:inline">/</span>
-        <span className="hidden truncate text-14 text-subtle sm:inline">Decisioning console</span>
       </div>
+
+      <nav aria-label="Pages" className="flex items-center gap-0.5 sm:ml-3">
+        {(
+          [
+            { id: "console", href: "#/", label: "Console" },
+            { id: "policies", href: "#/policies", label: "Policies" },
+          ] as const
+        ).map((item) => (
+          <a
+            key={item.id}
+            href={item.href}
+            aria-current={route === item.id ? "page" : undefined}
+            className={cn(
+              "flex h-8 items-center rounded px-2.5 text-13 font-medium text-subtle hover:bg-hover hover:text-fg",
+              route === item.id && "bg-selected text-fg hover:bg-selected",
+            )}
+          >
+            {item.label}
+          </a>
+        ))}
+      </nav>
 
       <div className="ml-auto flex items-center gap-1">
         <Popover.Root>
