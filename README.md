@@ -156,6 +156,17 @@ curl -s -X PUT localhost:4000/admin/config \
 
 ---
 
+## Policies
+
+```bash
+curl -s localhost:3000/v1/policies -H 'X-API-Key: dv_live_kaveri_7f3a9c2e' | jq '{active_version, active_version_source, versions: [.versions[] | {version, active, changed_clauses}]}'
+```
+
+Returns only the calling customer's policy versions: each fully resolved, with its hash, the clauses
+it changes from the version it extends, and whether it is the active one. `active_version_source`
+says where the active version came from (`db` for an admin override, `env`, `default`, or the
+customer's `fallback`). The console's **Policies** page reads it once per customer.
+
 ## Health
 
 ```bash
