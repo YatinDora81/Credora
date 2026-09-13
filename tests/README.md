@@ -204,6 +204,16 @@ must never appear in the API log at `info`.
 
 ---
 
+### `policies.test.ts` — the policy catalogue
+
+`GET /v1/policies` needs an API key and returns only that customer's policy versions: Kaveri sees
+3.1 (active) and 3.2 (extends 3.1, changes A1) and never Nexa's document, and the reverse holds.
+Every seeded customer, including the three added ones, gets its own catalogue with the right
+active version. Flipping `KAVERI_ACTIVE_POLICY_VERSION` through the admin API moves the active
+flag to 3.2 and reports the source as `db`; the suite puts 3.1 back.
+
+---
+
 ## `helpers.ts` — the harness
 
 | What | How |
