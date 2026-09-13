@@ -9,6 +9,7 @@ import {
   getHealth,
   keepalive,
   listApplications,
+  pingServices,
   type ApplicationListItem,
   type HealthResponse,
 } from "@/api";
@@ -201,6 +202,7 @@ export default function App() {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     async function ping() {
+      const direct = pingServices();
       try {
         const k = await keepalive();
         if (!cancelled) setServices(k.services);
@@ -216,6 +218,7 @@ export default function App() {
           }));
         }
       }
+      await direct;
       if (!cancelled) timer = setTimeout(ping, KEEPALIVE_MS);
     }
     void ping();

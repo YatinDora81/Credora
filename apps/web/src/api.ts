@@ -228,6 +228,16 @@ export class ApiError extends Error {
 // Empty in dev: requests stay same-origin and Vite proxies /v1 to the local API.
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
 
+function baseUrl(value: string | undefined, devDefault: string): string {
+  const v = value?.trim() || (import.meta.env.DEV ? devDefault : "");
+  return v.replace(/\/+$/, "");
+}
+
+// Hit directly by the keep-alive so each service gets its own traffic. Empty in a build = skipped.
+const WORKER_BASE_URL = baseUrl(import.meta.env.VITE_WORKER_BASE_URL, "http://localhost:4100");
+const UPSTREAM_BASE_URL = baseUrl(import.meta.env.VITE_UPSTREAM_BASE_URL, "http://localhost:4000");
+const KEEPALIVE_PING_TIMEOUT_MS = 3_000;
+
 async function parse(res: Response): Promise<{ body: unknown; raw: string }> {
   const raw = await res.text();
   if (!raw) return { body: null, raw: "" };
@@ -316,4 +326,19 @@ export function getHealth(): Promise<HealthResponse> {
 
 export function keepalive(): Promise<KeepaliveResponse> {
   return request<KeepaliveResponse>("/v1/keepalive", { cache: "no-store" });
+}
+
+// The worker and mock registry send no CORS headers, so the response is opaque; the request
+// still reaches them, which is all a wake-up needs. Their status comes from keepalive().
+export function pingServices(): Promise<void> {
+  const targets = [WORKER_BASE_URL, UPSTREAM_BASE_URL].filter(Boolean);
+  return Promise.allSettled(
+    targets.map((base) =>
+      fetch(`${base}/health`, {
+        mode: "no-cors",
+        cache: "no-store",
+        signal: AbortSignal.timeout(KEEPALIVE_PING_TIMEOUT_MS),
+      }),
+    ),
+  ).then(() => undefined);
 }

@@ -33,7 +33,9 @@ reasoning. Vite proxies `/v1` to the API on port 3000.
 
 `apps/web` is a static Vite build meant for Vercel (`apps/web/vercel.json`). Set the project's
 root directory to `apps/web` and set `VITE_API_BASE_URL` to the API's public URL (no trailing
-slash). It is read at build time, so redeploy after changing it.
+slash). It is read at build time, so redeploy after changing it. Set `VITE_WORKER_BASE_URL` and
+`VITE_UPSTREAM_BASE_URL` to the worker's and mock registry's public URLs too, so the console's
+keep-alive reaches them directly (see below); leave either unset to skip that ping.
 
 On the API, set `CORS_ORIGINS` to a comma-separated list of origins allowed to call it, e.g.
 `https://deepvue.vercel.app,https://*.vercel.app`. `*.` matches subdomains (useful for preview
@@ -233,10 +235,14 @@ curl -s localhost:3000/v1/keepalive | jq
 
 ### Keep-alive without a cron
 
-While anyone has the console open, it calls `GET /v1/keepalive` every two seconds. The API
-answers for itself and probes the worker's and the mock registry's `/health` in parallel, so
-one browser request keeps all three processes receiving traffic — on hosts that put idle
-services to sleep, none of them sleeps while the page is open. The probes are coalesced: any
+While anyone has the console open, it sends three requests every two seconds: `GET /v1/keepalive`
+to the API, and `GET /health` straight to the worker and the mock registry
+(`VITE_WORKER_BASE_URL`, `VITE_UPSTREAM_BASE_URL`; in dev they default to ports 4100 and 4000).
+The direct pings are `no-cors` — those services send no CORS headers, so the browser can't read
+the reply, but each request still lands as public traffic, so hosts that put idle services to
+sleep keep all three awake while the page is open. The status the header shows comes from the
+API, which answers for itself and probes the worker's and the mock registry's `/health` in
+parallel. Those probes are coalesced: any
 number of open tabs cause at most one downstream round per second, each probe times out after
 3s, and neither the keep-alive nor its probes are logged per request — only a service going
 unreachable or recovering is.
