@@ -34,9 +34,7 @@ yarn-error.log*
 .DS_Store
 
 # ---- docker / editor files that do not belong in the context ----
-Dockerfile
-apps/*/Dockerfile
-packages/*/Dockerfile
+docker/
 .dockerignore
 docker-compose.yml
 docker-compose.*.yml
