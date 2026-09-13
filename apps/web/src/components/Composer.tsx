@@ -41,7 +41,7 @@ function uuid(): string {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
-const GROUPS: ScenarioGroup[] = ["Baseline", "Adversarial", "Edge case"];
+const GROUPS: ScenarioGroup[] = ["Baseline", "Clean approval", "Adversarial", "Edge case"];
 
 const SUBMIT_HINT =
   typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘↵" : "Ctrl ↵";
