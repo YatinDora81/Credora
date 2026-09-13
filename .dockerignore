@@ -1,0 +1,44 @@
+# ---- dependency trees (reinstalled inside the image by `bun install`) ----
+node_modules
+apps/*/node_modules
+packages/*/node_modules
+**/node_modules
+
+# ---- VCS ----
+.git
+.gitignore
+.github
+
+# ---- secrets: the real .env must never land in an image layer ----
+.env
+.env.local
+.env.*.local
+
+# ---- build output / caches ----
+dist
+apps/*/dist
+packages/*/dist
+build
+.turbo
+apps/*/.turbo
+packages/*/.turbo
+.next
+coverage
+*.tsbuildinfo
+
+# ---- logs and noise ----
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+
+# ---- docker / editor files that do not belong in the context ----
+Dockerfile
+apps/*/Dockerfile
+packages/*/Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+.vscode
+.idea
