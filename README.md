@@ -22,6 +22,7 @@ docker compose up --build
 |---|---|
 | API + UI | http://localhost:3000 |
 | Mock registry | http://localhost:4000 |
+| Worker health | http://localhost:4100/health |
 | Postgres | localhost:5432 (`deepvue` / `deepvue`) |
 
 Open http://localhost:3000 for the one-page console: submit a fixture, watch it decide, and
@@ -164,6 +165,32 @@ Always `200` — the body carries the state, not the status code. A monitoring s
 your service to "down" because an upstream is degraded is not what you want. Reports the
 circuit-breaker state, model reachability, and queue depth.
 
+Every process also answers a cheap liveness check with no database work:
+
+| Service | Endpoint | `status` values |
+|---|---|---|
+| API | `GET /v1/keepalive` | `ok` when the API and both services below report `ok`, otherwise `degraded` |
+| Worker | `GET :4100/health` (`WORKER_PORT`) | `starting` / `ok` / `degraded` (last queue claim failed) / `stalled` / `stopping` |
+| Mock registry | `GET :4000/health` | `ok` |
+
+```bash
+curl -s localhost:3000/v1/keepalive | jq
+```
+
+### Keep-alive without a cron
+
+While anyone has the console open, it calls `GET /v1/keepalive` every two seconds. The API
+answers for itself and probes the worker's and the mock registry's `/health` in parallel, so
+one browser request keeps all three processes receiving traffic — on hosts that put idle
+services to sleep, none of them sleeps while the page is open. The probes are coalesced: any
+number of open tabs cause at most one downstream round per second, each probe times out after
+3s, and neither the keep-alive nor its probes are logged per request — only a service going
+unreachable or recovering is.
+
+The API finds the others through `WORKER_BASE_URL` and `UPSTREAM_BASE_URL`. Under docker
+compose the defaults are right. On a host that only counts public traffic, point both at the
+services' public URLs.
+
 ---
 
 ## Tests
@@ -172,6 +199,8 @@ circuit-breaker state, model reachability, and queue depth.
 bun test packages/core      # pure: money, dates, grounding, sectors, injection, policy engine
 bun test tests              # integration: needs postgres + mock upstream
 ```
+
+`bun test tests/keepalive.test.ts` covers the health endpoints and the keep-alive roll-up.
 
 The four that would block a release are number normalisation, the policy-engine table,
 idempotency, and PII masking. `DECISIONS.md` says why.
