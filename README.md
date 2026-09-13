@@ -1,159 +1,203 @@
-# Turborepo starter
+# Deepvue — Merchant Onboarding & Risk Decisioning
 
-This Turborepo starter is maintained by the Turborepo core team.
+A service that takes a loan application from a lender, verifies the business against an
+external registry, reads the attached free text with an LLM, evaluates it against that
+lender's credit policy, and returns a decision in which **every reason cites a specific
+policy clause**.
 
-## Using this example
+The model never decides anything. It converts free text into structured fields, and a
+deterministic engine reading a YAML policy file produces the outcome. There is no code path
+by which model output can set a decision.
 
-Run the following command:
+---
 
-```sh
-npx create-turbo@latest
+## Run it
+
+```bash
+cp .env.example .env          # add GEMINI_API_KEY (or GEMINI_API_KEYS) if you want live extraction
+docker compose up --build
 ```
 
-## What's inside?
+| Service | URL |
+|---|---|
+| API + UI | http://localhost:3000 |
+| Mock registry | http://localhost:4000 |
+| Postgres | localhost:5432 (`deepvue` / `deepvue`) |
 
-This Turborepo includes the following packages/apps:
+Open http://localhost:3000 for the one-page console: submit a fixture, watch it decide, and
+read the clause-by-clause reasoning.
 
-### Apps and Packages
+Without a Gemini key the system still runs end to end — extraction is reported unavailable,
+extraction-dependent clauses come back `UNDETERMINED`, and the decision is marked `degraded`.
+That is the designed failure mode, not an error.
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `@next/eslint-plugin-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+### Credentials
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+| What | Value |
+|---|---|
+| Kaveri Capital API key | `dv_live_kaveri_7f3a9c2e` |
+| Nexa Finserv API key | `dv_live_nexa_4b8d1e6a` |
+| Admin key (API + mock) | `dv_admin_local_only_change_me` |
 
-### Utilities
+---
 
-This Turborepo has some additional tools already setup for you:
+## The seven things an assessor runs
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+### 1. Idempotency — same key twice gives one application
 
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```bash
+KEY=$(uuidgen)
+for i in 1 2; do
+  curl -s -X POST localhost:3000/v1/applications \
+    -H 'X-API-Key: dv_live_kaveri_7f3a9c2e' \
+    -H "Idempotency-Key: $KEY" \
+    -H 'Content-Type: application/json' \
+    -d @samples/a1.json | jq -c '{application_id, status}'
+done
 ```
 
-Without global `turbo`, use your package manager:
+Both calls return the same `application_id`. One `Application` row, one set of upstream calls.
+Replaying with a *different* body under the same key returns `409 idempotency_key_reuse`.
 
-```sh
-cd my-turborepo
-npx turbo build
-bun exec turbo build
-bun exec turbo build
+### 2. Tenant isolation — A's key against B's id is a 404
+
+```bash
+ID=$(curl -s -X POST localhost:3000/v1/applications \
+  -H 'X-API-Key: dv_live_nexa_4b8d1e6a' -H 'Content-Type: application/json' \
+  -d @samples/a1.json | jq -r .application_id)
+
+curl -s -o /dev/null -w '%{http_code}\n' localhost:3000/v1/applications/$ID \
+  -H 'X-API-Key: dv_live_kaveri_7f3a9c2e'      # -> 404, never 403
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+`404` rather than `403` is deliberate: a `403` would confirm the id exists and leak the
+existence of another customer's application.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+### 3. Twenty applications under chaos — all reach a terminal state
 
-```sh
-turbo build --filter=docs
+The mock registry defaults to 10% hang, 5% rate-limit, 30% hard failure. Fire twenty and
+watch every one land on `APPROVED`, `REVIEW`, `REJECTED` or `FAILED`, with the degraded ones
+saying so.
+
+```bash
+for i in $(seq 20); do
+  curl -s -X POST localhost:3000/v1/applications \
+    -H 'X-API-Key: dv_live_kaveri_7f3a9c2e' -H 'Content-Type: application/json' \
+    -d @samples/a1.json > /dev/null &
+done; wait
+
+sleep 60
+curl -s 'localhost:3000/v1/applications?limit=100' \
+  -H 'X-API-Key: dv_live_kaveri_7f3a9c2e' | jq -r '.items[] | "\(.status)\t\(.degraded)"' | sort | uniq -c
 ```
 
-Without global `turbo`:
+### 4. Every Appendix A variant, under both policies
 
-```sh
-npx turbo build --filter=docs
-bun exec turbo build --filter=docs
-bun exec turbo build --filter=docs
+The five fixtures are loadable from the UI's submit panel, and live in
+`packages/core/src/fixtures.ts`. Submit each under both API keys and check the cited clause
+text against the policy YAML in `packages/core/src/policies/`.
+
+For deterministic output, turn the chaos off first (see §7 below).
+
+### 5. Model-outage switch
+
+```bash
+curl -s -X PUT localhost:3000/v1/admin/config \
+  -H 'X-Admin-Key: dv_admin_local_only_change_me' \
+  -H 'Content-Type: application/json' \
+  -d '{"MODEL_OUTAGE":"true"}'
 ```
 
-### Develop
+Takes effect within two seconds, no redeploy. Extraction reports
+`MODEL_OUTAGE_SIMULATED`, the extraction cache is bypassed (so the switch cannot look like a
+no-op), extraction-backed clauses go `UNDETERMINED`, and upstream-backed clauses are
+unaffected. Set it back to `"false"` to restore.
 
-To develop all apps and packages, run the following command:
+### 6. Kaveri 3.1 → 3.2 while applications are in flight
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
+```bash
+curl -s -X PUT localhost:3000/v1/admin/config \
+  -H 'X-Admin-Key: dv_admin_local_only_change_me' \
+  -H 'Content-Type: application/json' \
+  -d '{"KAVERI_ACTIVE_POLICY_VERSION":"3.2"}'
 ```
 
-Without global `turbo`, use your package manager:
+The policy version is pinned on the row at intake. An application created before the flip is
+still decided under 3.1 and its decision shows `"version": "3.1"` beside
+`"active_version_now": "3.2"`. Applications created after the flip get 3.2, where the
+incorporation threshold drops from 36 months to 24 — turning the A.1 sample from `REJECTED`
+into `REVIEW`.
 
-```sh
-cd my-turborepo
-npx turbo dev
-bun exec turbo dev
-bun exec turbo dev
+### 7. Logs contain no unmasked PII
+
+```bash
+docker compose logs api worker | grep -E 'AAFCS4321K|29AAFCS4321K1ZP' && echo LEAK || echo clean
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+Two layers: pino path redaction, plus a serializer of last resort that regex-scans every
+string value in every log object, because PAN and GSTIN also appear inside free text —
+document bodies, upstream error strings, Zod issue messages. GSTIN is matched first, since a
+GSTIN contains a PAN inside it.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+---
 
-```sh
-turbo dev --filter=web
+## Deterministic mode
+
+Force the mock registry to behave, so policy output is reproducible:
+
+```bash
+curl -s -X PUT localhost:4000/admin/config \
+  -H 'X-Admin-Key: dv_admin_local_only_change_me' \
+  -H 'Content-Type: application/json' \
+  -d '{"MOCK_FAIL_RATE":0,"MOCK_HANG_RATE":0,"MOCK_RATE_LIMIT_RATE":0}'
 ```
 
-Without global `turbo`:
+---
 
-```sh
-npx turbo dev --filter=web
-bun exec turbo dev --filter=web
-bun exec turbo dev --filter=web
+## Health
+
+```bash
+curl -s localhost:3000/v1/health | jq
 ```
 
-### Remote Caching
+Always `200` — the body carries the state, not the status code. A monitoring system flapping
+your service to "down" because an upstream is degraded is not what you want. Reports the
+circuit-breaker state, model reachability, and queue depth.
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+---
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+## Tests
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
+```bash
+bun test packages/core      # pure: money, dates, grounding, sectors, injection, policy engine
+bun test tests              # integration: needs postgres + mock upstream
 ```
 
-Without global `turbo`, use your package manager:
+The four that would block a release are number normalisation, the policy-engine table,
+idempotency, and PII masking. `DECISIONS.md` says why.
 
-```sh
-cd my-turborepo
-npx turbo login
-bun exec turbo login
-bun exec turbo login
+---
+
+## Layout
+
+```
+packages/core       pure decision logic — no I/O, no database, no clock. This is what makes
+                    a decision reproducible from its stored evidence bundle.
+packages/platform   logger (with the PII masking), runtime config and request context —
+                    the three things both apps need and neither should own
+packages/db         owns Prisma 7: schema, migrations, seed, client (pg driver adapter) and
+                    the repository layer, including the SKIP LOCKED claim query
+apps/api            HTTP: controllers → services → repositories. Writes a row and returns;
+                    no slow work in the request path. Also serves the built UI
+apps/worker         claims from the outbox, runs the pipeline services, writes decisions
+apps/mock-upstream  a registry that deliberately hangs, resets and rate-limits
+apps/web            the one-page console
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+`packages/core` never imports `packages/db`. The policy engine takes an evidence object as an
+argument and does not know a database exists. Every database call in either app goes through a
+repository in `packages/db`; no controller, service or pipeline stage touches Prisma directly.
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-bun exec turbo link
-bun exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+See `DECISIONS.md` for the design record: what was left out, how untrusted model output is
+handled, how policies are represented, how the policy silences were resolved, and which tests
+would block a release.
