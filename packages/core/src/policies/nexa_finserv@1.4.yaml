@@ -1,0 +1,70 @@
+customer: nexa_finserv
+version: "1.4"
+mark_degraded_only: true         # B7: decide on what is available, mark degraded
+clauses:
+  - id: B1
+    text: "Business must be incorporated at least 12 months before application date."
+    check: min_age_months
+    params: { months: 12 }
+    requires: [incorporation_date, applied_on]
+    on_fail: REJECT
+    on_undetermined: APPROVE
+
+  - id: B2
+    text: "GSTIN must be active. Filing recency is not a blocker if turnover is otherwise evidenced."
+    check: gstin_active
+    params: {}
+    requires: [gstin_status]
+    on_fail: REJECT
+    on_undetermined: APPROVE
+
+  - id: B3
+    text: "Declared turnover may exceed evidenced turnover by up to 100% for businesses under 24 months old."
+    check: turnover_overstatement_within
+    params: { max_pct: 100, basis: evidenced_turnover }
+    requires: [declared_turnover, evidenced_turnover]
+    applies_when:
+      check: max_age_months
+      params: { months: 24 }
+    on_fail: REVIEW
+    on_undetermined: APPROVE
+
+  - id: B4
+    text: "Loan amount must not exceed 40% of verified annual turnover."
+    check: loan_to_turnover_ratio
+    params: { max_pct: 40, basis: evidenced_turnover }
+    requires: [loan_amount, evidenced_turnover]
+    on_fail: REJECT
+    on_undetermined: APPROVE
+
+  - id: B5
+    text: "Address mismatch alone is not a blocker."
+    check: address_mismatch
+    params: {}
+    requires: [payload_registered_address, upstream_registered_address]
+    on_fail: APPROVE
+    on_undetermined: APPROVE
+
+  - id: B6
+    text: "Undisclosed units are noted but do not require REVIEW unless combined with a turnover discrepancy above B3."
+    check: undisclosed_units_with_overstatement
+    params: { max_pct: 100, basis: evidenced_turnover }
+    requires: [undisclosed_units, declared_turnover, evidenced_turnover]
+    on_fail: REVIEW
+    on_undetermined: APPROVE
+
+  - id: B7
+    text: "If the verification source does not respond, decide on what is available and mark the decision as degraded."
+    check: verification_succeeded
+    params: {}
+    requires: [verification_succeeded]
+    on_fail: APPROVE
+    on_undetermined: APPROVE
+
+  - id: B8
+    text: "Sectors excluded entirely: gambling, unregistered lending."
+    check: sector_excluded
+    params: { excluded: [gambling, unregistered_lending] }
+    requires: [all_sectors]
+    on_fail: REJECT
+    on_undetermined: APPROVE

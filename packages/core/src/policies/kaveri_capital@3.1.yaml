@@ -1,0 +1,67 @@
+customer: kaveri_capital
+version: "3.1"
+cap_undetermined_at: REVIEW      # A7: failure to verify is REVIEW, never automatic REJECT
+clauses:
+  - id: A1
+    text: "Business must be incorporated at least 36 months before application date."
+    check: min_age_months
+    params: { months: 36 }
+    requires: [incorporation_date, applied_on]
+    on_fail: REJECT
+    on_undetermined: REVIEW
+
+  - id: A2
+    text: "GSTIN must be active and returns filed within the last 90 days."
+    check: gstin_active_and_filed_within
+    params: { days: 90 }
+    requires: [gstin_status, last_return_filed, applied_on]
+    on_fail: REJECT
+    on_undetermined: REVIEW
+
+  - id: A3
+    text: "Declared turnover must be within 40% of turnover evidenced by verification sources."
+    check: turnover_within_percent
+    params: { max_pct: 40, basis: evidenced_turnover }
+    requires: [declared_turnover, evidenced_turnover]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: A4
+    text: "Loan amount must not exceed 25% of verified annual turnover."
+    check: loan_to_turnover_ratio
+    params: { max_pct: 25, basis: evidenced_turnover }
+    requires: [loan_amount, evidenced_turnover]
+    on_fail: REJECT
+    on_undetermined: REVIEW
+
+  - id: A5
+    text: "Any address mismatch between registration and operating premises requires REVIEW."
+    check: address_mismatch
+    params: {}
+    requires: [payload_registered_address, upstream_registered_address]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: A6
+    text: "Any undisclosed business unit or entity noted during assessment requires REVIEW."
+    check: undisclosed_units_present
+    params: {}
+    requires: [undisclosed_units]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: A7
+    text: "Failure to verify against the verification source requires REVIEW, never automatic REJECT."
+    check: verification_succeeded
+    params: {}
+    requires: [verification_succeeded]
+    on_fail: REVIEW
+    on_undetermined: REVIEW
+
+  - id: A8
+    text: "Sectors excluded entirely: crypto trading, gambling, unregistered lending."
+    check: sector_excluded
+    params: { excluded: [crypto_trading, gambling, unregistered_lending] }
+    requires: [all_sectors]
+    on_fail: REJECT
+    on_undetermined: REVIEW

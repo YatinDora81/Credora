@@ -1,0 +1,7 @@
+customer: kaveri_capital
+version: "3.2"
+extends: "3.1"
+overrides:
+  A1:
+    text: "Business must be incorporated at least 24 months before application date."
+    params: { months: 24 }
