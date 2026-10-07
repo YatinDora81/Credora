@@ -1,5 +1,5 @@
-import { canonicalStringify, sha256Hex } from "@deepvue/core";
-import { idempotencyRepository } from "@deepvue/db";
+import { canonicalStringify, sha256Hex } from "@credora/core";
+import { idempotencyRepository } from "@credora/db";
 
 export type IdempotencyLookup =
   | { kind: "proceed" }

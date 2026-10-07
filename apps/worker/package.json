@@ -10,9 +10,9 @@
     "test": "echo no tests"
   },
   "dependencies": {
-    "@deepvue/core": "workspace:*",
-    "@deepvue/db": "workspace:*",
-    "@deepvue/platform": "workspace:*",
+    "@credora/core": "workspace:*",
+    "@credora/db": "workspace:*",
+    "@credora/platform": "workspace:*",
     "@google/genai": "^1.0.0"
   }
 }

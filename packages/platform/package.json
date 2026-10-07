@@ -1,5 +1,5 @@
 {
-  "name": "@deepvue/platform",
+  "name": "@credora/platform",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "test": "echo no tests"
   },
   "dependencies": {
-    "@deepvue/db": "workspace:*",
+    "@credora/db": "workspace:*",
     "pino": "^8.21.0"
   }
 }

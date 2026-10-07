@@ -20,7 +20,7 @@ const LIST_LIMIT = 25;
 const LIST_POLL_MS = 2000;
 const HEALTH_POLL_MS = 5000;
 const KEEPALIVE_MS = 2000;
-const THEME_KEY = "deepvue.theme";
+const THEME_KEY = "credora.theme";
 
 export type Route = "console" | "policies";
 
@@ -36,7 +36,7 @@ function useRoute(): Route {
     return () => window.removeEventListener("hashchange", onChange);
   }, []);
   React.useEffect(() => {
-    document.title = route === "policies" ? "Policies · Deepvue" : "Deepvue · Decisioning console";
+    document.title = route === "policies" ? "Policies · Credora" : "Credora · Decisioning console";
   }, [route]);
   return route;
 }

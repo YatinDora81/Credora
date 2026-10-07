@@ -1,4 +1,4 @@
-import { config, logger } from "@deepvue/platform";
+import { config, logger } from "@credora/platform";
 
 const PROBE_TIMEOUT_MS = 3_000;
 const MIN_PROBE_INTERVAL_MS = 1_000;

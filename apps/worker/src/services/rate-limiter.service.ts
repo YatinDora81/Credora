@@ -130,7 +130,7 @@ export class RateLimiterService {
   };
 }
 
-const globalForLimiter = globalThis as unknown as { __deepvueRateLimiter?: RateLimiterService };
+const globalForLimiter = globalThis as unknown as { __credoraRateLimiter?: RateLimiterService };
 export const rateLimiterService: RateLimiterService =
-  globalForLimiter.__deepvueRateLimiter ?? new RateLimiterService();
-globalForLimiter.__deepvueRateLimiter = rateLimiterService;
+  globalForLimiter.__credoraRateLimiter ?? new RateLimiterService();
+globalForLimiter.__credoraRateLimiter = rateLimiterService;

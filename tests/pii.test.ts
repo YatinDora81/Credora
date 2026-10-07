@@ -8,7 +8,7 @@ import {
   sample,
   postAccepted,
 } from "./helpers";
-import { makeLogger, maskText, maskPan, maskGstin } from "@deepvue/platform";
+import { makeLogger, maskText, maskPan, maskGstin } from "@credora/platform";
 
 const PIPELINE_PREFIXES = ["application.", "upstream.", "extraction.", "policy.", "decision."];
 

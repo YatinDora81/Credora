@@ -1,6 +1,6 @@
-import type { Application } from "@deepvue/db";
-import { applicationRepository } from "@deepvue/db";
-import { config, errorText, logger, newRequestId, withContext } from "@deepvue/platform";
+import type { Application } from "@credora/db";
+import { applicationRepository } from "@credora/db";
+import { config, errorText, logger, newRequestId, withContext } from "@credora/platform";
 import { breakerService } from "./breaker.service";
 import { geminiKeys } from "./gemini-keys";
 import { pipelineService } from "./pipeline.service";

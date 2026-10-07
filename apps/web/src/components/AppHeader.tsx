@@ -64,13 +64,13 @@ function Logo() {
     <svg aria-hidden viewBox="0 0 32 32" className="h-5 w-5 shrink-0">
       <rect width="32" height="32" rx="7.5" className="fill-fg" />
       <path
-        d="M10 8.5h5.25a7.5 7.5 0 0 1 0 15H10z"
+        d="M22 10.2a7.6 7.6 0 1 0 0 11.6"
         fill="none"
         strokeWidth="3"
-        strokeLinejoin="round"
+        strokeLinecap="round"
         className="stroke-bg"
       />
-      <circle cx="15.25" cy="16" r="2.25" className="fill-accent" />
+      <circle cx="23.2" cy="16" r="2.25" className="fill-accent" />
     </svg>
   );
 }
@@ -105,7 +105,7 @@ export function AppHeader({
     <header className="flex h-12 shrink-0 items-center gap-3 border-b px-4">
       <div className="flex min-w-0 items-center gap-2">
         <Logo />
-        <span className="text-14 font-semibold">Deepvue</span>
+        <span className="text-14 font-semibold">Credora</span>
       </div>
 
       <nav aria-label="Pages" className="flex items-center gap-0.5 sm:ml-3">

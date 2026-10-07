@@ -1,6 +1,6 @@
-import { upstreamCallRepository } from "@deepvue/db";
-import type { UpstreamCallOutcome, UpstreamCallRecord, UpstreamResult } from "@deepvue/core";
-import { config, errorText, logger, maskText, maskedError } from "@deepvue/platform";
+import { upstreamCallRepository } from "@credora/db";
+import type { UpstreamCallOutcome, UpstreamCallRecord, UpstreamResult } from "@credora/core";
+import { config, errorText, logger, maskText, maskedError } from "@credora/platform";
 import { breakerService } from "./breaker.service";
 
 const DEFAULTS = {

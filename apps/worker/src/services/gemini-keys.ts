@@ -132,7 +132,7 @@ class GeminiKeyPool {
   }
 }
 
-const globalForPool = globalThis as unknown as { __deepvueGeminiPool?: GeminiKeyPool };
+const globalForPool = globalThis as unknown as { __credoraGeminiPool?: GeminiKeyPool };
 export const geminiKeys: GeminiKeyPool =
-  globalForPool.__deepvueGeminiPool ?? new GeminiKeyPool();
-globalForPool.__deepvueGeminiPool = geminiKeys;
+  globalForPool.__credoraGeminiPool ?? new GeminiKeyPool();
+globalForPool.__credoraGeminiPool = geminiKeys;

@@ -1,5 +1,5 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
-import { logger, newRequestId, withContext } from "@deepvue/platform";
+import { logger, newRequestId, withContext } from "@credora/platform";
 import { routePath } from "./auth";
 
 const QUIET_PATHS = new Set(["/v1/health", "/v1/keepalive"]);

@@ -1,5 +1,5 @@
 {
-  "name": "deepvue-decisioning",
+  "name": "credora-decisioning",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -11,10 +11,10 @@
     "test": "turbo run test",
     "test:unit": "bun test packages/core",
     "test:integration": "bun test tests",
-    "db:generate": "bun run --filter @deepvue/db db:generate",
-    "db:migrate": "bun run --filter @deepvue/db db:migrate",
-    "db:deploy": "bun run --filter @deepvue/db db:deploy",
-    "db:seed": "bun run --filter @deepvue/db db:seed"
+    "db:generate": "bun run --filter @credora/db db:generate",
+    "db:migrate": "bun run --filter @credora/db db:migrate",
+    "db:deploy": "bun run --filter @credora/db db:deploy",
+    "db:seed": "bun run --filter @credora/db db:seed"
   },
   "devDependencies": {
     "turbo": "^2",
@@ -22,8 +22,8 @@
     "@types/bun": "latest"
   },
   "dependencies": {
-    "@deepvue/core": "workspace:*",
-    "@deepvue/db": "workspace:*",
-    "@deepvue/platform": "workspace:*"
+    "@credora/core": "workspace:*",
+    "@credora/db": "workspace:*",
+    "@credora/platform": "workspace:*"
   }
 }

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
-    <title>Deepvue · Decisioning console</title>
+    <title>Credora · Decisioning console</title>
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -15,7 +15,7 @@
       (function () {
         var theme = null;
         try {
-          theme = localStorage.getItem("deepvue.theme");
+          theme = localStorage.getItem("credora.theme");
         } catch (e) {}
         if (theme !== "light" && theme !== "dark") {
           theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";

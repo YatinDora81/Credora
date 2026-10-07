@@ -1,5 +1,5 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
-import { config } from "@deepvue/platform";
+import { config } from "@credora/platform";
 
 const ALLOWED_HEADERS = "Content-Type, Accept, X-API-Key, X-Admin-Key, Idempotency-Key, X-Request-Id";
 const ALLOWED_METHODS = "GET, POST, PUT, OPTIONS";
@@ -7,7 +7,7 @@ const EXPOSED_HEADERS = "X-Request-Id";
 const PREFLIGHT_MAX_AGE_SEC = "600";
 
 // CORS_ORIGINS is a comma-separated list. Entries are exact origins
-// ("https://deepvue.vercel.app"), subdomain wildcards ("https://*.vercel.app"), or "*".
+// ("https://credora.vercel.app"), subdomain wildcards ("https://*.vercel.app"), or "*".
 function parseOrigins(raw: string | undefined): string[] {
   return (raw ?? "")
     .split(",")

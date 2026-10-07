@@ -18,7 +18,7 @@ const DEFAULT_RATES: Rates = {
 
 const DEFAULT_HANG_SECONDS = 25;
 const DEFAULT_PORT = 4000;
-const DEFAULT_ADMIN_KEY = "dv_admin_local_only_change_me";
+const DEFAULT_ADMIN_KEY = "cr_admin_local_only_change_me";
 
 const overrides: Partial<Rates> = {};
 

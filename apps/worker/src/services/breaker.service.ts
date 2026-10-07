@@ -1,6 +1,6 @@
-import type { UpstreamState } from "@deepvue/db";
-import { upstreamStateRepository } from "@deepvue/db";
-import { config, logger, maskedError } from "@deepvue/platform";
+import type { UpstreamState } from "@credora/db";
+import { upstreamStateRepository } from "@credora/db";
+import { config, logger, maskedError } from "@credora/platform";
 
 export type CircuitState = "CLOSED" | "OPEN" | "HALF_OPEN";
 

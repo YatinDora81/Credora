@@ -1,4 +1,4 @@
-# Deepvue — Merchant Onboarding & Risk Decisioning
+# Credora — Merchant Onboarding & Risk Decisioning
 
 A service that takes a loan application from a lender, verifies the business against an
 external registry, reads the attached free text with an LLM, evaluates it against that
@@ -23,7 +23,7 @@ docker compose up --build
 | API | http://localhost:3000 |
 | Mock registry | http://localhost:4000 |
 | Worker health | http://localhost:4100/health |
-| Postgres | localhost:5432 (`deepvue` / `deepvue`) |
+| Postgres | localhost:5432 (`credora` / `credora`) |
 
 The console is not served by the API. Run it with `bun run --filter web dev` and open
 http://localhost:5173: submit a fixture, watch it decide, and read the clause-by-clause
@@ -38,7 +38,7 @@ slash). It is read at build time, so redeploy after changing it. Set `VITE_WORKE
 keep-alive reaches them directly (see below); leave either unset to skip that ping.
 
 On the API, set `CORS_ORIGINS` to a comma-separated list of origins allowed to call it, e.g.
-`https://deepvue.vercel.app,https://*.vercel.app`. `*.` matches subdomains (useful for preview
+`https://credora.vercel.app,https://*.vercel.app`. `*.` matches subdomains (useful for preview
 deployments) and `*` allows any origin. It defaults to `http://localhost:5173`.
 
 Without a Gemini key the system still runs end to end — extraction is reported unavailable,
@@ -49,12 +49,12 @@ That is the designed failure mode, not an error.
 
 | What | Value |
 |---|---|
-| Kaveri Capital API key | `dv_live_kaveri_7f3a9c2e` |
-| Nexa Finserv API key | `dv_live_nexa_4b8d1e6a` |
-| Tapti Tradefin API key | `dv_live_tapti_28145a1a` |
-| Palar MSME Finance API key | `dv_live_palar_7ec8a7b6` |
-| Vamsadhara Co-operative Credit API key | `dv_live_vamsadhara_d8c06574` |
-| Admin key (API + mock) | `dv_admin_local_only_change_me` |
+| Kaveri Capital API key | `cr_live_kaveri_7f3a9c2e` |
+| Nexa Finserv API key | `cr_live_nexa_4b8d1e6a` |
+| Tapti Tradefin API key | `cr_live_tapti_28145a1a` |
+| Palar MSME Finance API key | `cr_live_palar_7ec8a7b6` |
+| Vamsadhara Co-operative Credit API key | `cr_live_vamsadhara_d8c06574` |
+| Admin key (API + mock) | `cr_admin_local_only_change_me` |
 
 ### Customers
 
@@ -93,7 +93,7 @@ every policy, so each customer has a case it approves.
 KEY=$(uuidgen)
 for i in 1 2; do
   curl -s -X POST localhost:3000/v1/applications \
-    -H 'X-API-Key: dv_live_kaveri_7f3a9c2e' \
+    -H 'X-API-Key: cr_live_kaveri_7f3a9c2e' \
     -H "Idempotency-Key: $KEY" \
     -H 'Content-Type: application/json' \
     -d @samples/a1.json | jq -c '{application_id, status}'
@@ -107,11 +107,11 @@ Replaying with a *different* body under the same key returns `409 idempotency_ke
 
 ```bash
 ID=$(curl -s -X POST localhost:3000/v1/applications \
-  -H 'X-API-Key: dv_live_nexa_4b8d1e6a' -H 'Content-Type: application/json' \
+  -H 'X-API-Key: cr_live_nexa_4b8d1e6a' -H 'Content-Type: application/json' \
   -d @samples/a1.json | jq -r .application_id)
 
 curl -s -o /dev/null -w '%{http_code}\n' localhost:3000/v1/applications/$ID \
-  -H 'X-API-Key: dv_live_kaveri_7f3a9c2e'      # -> 404, never 403
+  -H 'X-API-Key: cr_live_kaveri_7f3a9c2e'      # -> 404, never 403
 ```
 
 `404` rather than `403` is deliberate: a `403` would confirm the id exists and leak the
@@ -126,13 +126,13 @@ saying so.
 ```bash
 for i in $(seq 20); do
   curl -s -X POST localhost:3000/v1/applications \
-    -H 'X-API-Key: dv_live_kaveri_7f3a9c2e' -H 'Content-Type: application/json' \
+    -H 'X-API-Key: cr_live_kaveri_7f3a9c2e' -H 'Content-Type: application/json' \
     -d @samples/a1.json > /dev/null &
 done; wait
 
 sleep 60
 curl -s 'localhost:3000/v1/applications?limit=100' \
-  -H 'X-API-Key: dv_live_kaveri_7f3a9c2e' | jq -r '.items[] | "\(.status)\t\(.degraded)"' | sort | uniq -c
+  -H 'X-API-Key: cr_live_kaveri_7f3a9c2e' | jq -r '.items[] | "\(.status)\t\(.degraded)"' | sort | uniq -c
 ```
 
 ### 4. Every Appendix A variant, under every policy
@@ -149,7 +149,7 @@ For deterministic output, turn the chaos off first (see §7 below).
 
 ```bash
 curl -s -X PUT localhost:3000/v1/admin/config \
-  -H 'X-Admin-Key: dv_admin_local_only_change_me' \
+  -H 'X-Admin-Key: cr_admin_local_only_change_me' \
   -H 'Content-Type: application/json' \
   -d '{"MODEL_OUTAGE":"true"}'
 ```
@@ -163,7 +163,7 @@ unaffected. Set it back to `"false"` to restore.
 
 ```bash
 curl -s -X PUT localhost:3000/v1/admin/config \
-  -H 'X-Admin-Key: dv_admin_local_only_change_me' \
+  -H 'X-Admin-Key: cr_admin_local_only_change_me' \
   -H 'Content-Type: application/json' \
   -d '{"KAVERI_ACTIVE_POLICY_VERSION":"3.2"}'
 ```
@@ -193,7 +193,7 @@ Force the mock registry to behave, so policy output is reproducible:
 
 ```bash
 curl -s -X PUT localhost:4000/admin/config \
-  -H 'X-Admin-Key: dv_admin_local_only_change_me' \
+  -H 'X-Admin-Key: cr_admin_local_only_change_me' \
   -H 'Content-Type: application/json' \
   -d '{"MOCK_FAIL_RATE":0,"MOCK_HANG_RATE":0,"MOCK_RATE_LIMIT_RATE":0}'
 ```
@@ -203,7 +203,7 @@ curl -s -X PUT localhost:4000/admin/config \
 ## Policies
 
 ```bash
-curl -s localhost:3000/v1/policies -H 'X-API-Key: dv_live_kaveri_7f3a9c2e' | jq '{active_version, active_version_source, versions: [.versions[] | {version, active, changed_clauses}]}'
+curl -s localhost:3000/v1/policies -H 'X-API-Key: cr_live_kaveri_7f3a9c2e' | jq '{active_version, active_version_source, versions: [.versions[] | {version, active, changed_clauses}]}'
 ```
 
 Returns only the calling customer's policy versions: each fully resolved, with its hash, the clauses

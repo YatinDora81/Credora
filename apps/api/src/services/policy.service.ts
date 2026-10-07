@@ -1,6 +1,6 @@
-import type { Customer } from "@deepvue/db";
-import { canonicalStringify, listPolicies, loadPolicy, policyHash, type Policy } from "@deepvue/core";
-import { config, logger } from "@deepvue/platform";
+import type { Customer } from "@credora/db";
+import { canonicalStringify, listPolicies, loadPolicy, policyHash, type Policy } from "@credora/core";
+import { config, logger } from "@credora/platform";
 
 export type ActiveVersionSource = "db" | "env" | "default" | "fallback";
 

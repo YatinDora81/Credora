@@ -1,5 +1,5 @@
-import { applicationRepository, upstreamStateRepository } from "@deepvue/db";
-import { config, logger } from "@deepvue/platform";
+import { applicationRepository, upstreamStateRepository } from "@credora/db";
+import { config, logger } from "@credora/platform";
 
 const MODEL_CACHE_TTL_MS = 30_000;
 const MODEL_PROBE_TIMEOUT_MS = 2_500;

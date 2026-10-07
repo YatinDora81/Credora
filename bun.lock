@@ -3,11 +3,11 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "deepvue-decisioning",
+      "name": "credora-decisioning",
       "dependencies": {
-        "@deepvue/core": "workspace:*",
-        "@deepvue/db": "workspace:*",
-        "@deepvue/platform": "workspace:*",
+        "@credora/core": "workspace:*",
+        "@credora/db": "workspace:*",
+        "@credora/platform": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -19,9 +19,9 @@
       "name": "api",
       "version": "0.0.0",
       "dependencies": {
-        "@deepvue/core": "workspace:*",
-        "@deepvue/db": "workspace:*",
-        "@deepvue/platform": "workspace:*",
+        "@credora/core": "workspace:*",
+        "@credora/db": "workspace:*",
+        "@credora/platform": "workspace:*",
         "express": "^5.1.0",
         "zod": "^3.23.8",
       },
@@ -43,7 +43,7 @@
       "name": "web",
       "version": "0.0.0",
       "dependencies": {
-        "@deepvue/core": "workspace:*",
+        "@credora/core": "workspace:*",
         "@fontsource/ibm-plex-mono": "^5.3.0",
         "@fontsource/ibm-plex-sans": "^5.3.0",
         "@radix-ui/react-popover": "^1.1.23",
@@ -69,14 +69,14 @@
       "name": "worker",
       "version": "0.0.0",
       "dependencies": {
-        "@deepvue/core": "workspace:*",
-        "@deepvue/db": "workspace:*",
-        "@deepvue/platform": "workspace:*",
+        "@credora/core": "workspace:*",
+        "@credora/db": "workspace:*",
+        "@credora/platform": "workspace:*",
         "@google/genai": "^1.0.0",
       },
     },
     "packages/core": {
-      "name": "@deepvue/core",
+      "name": "@credora/core",
       "version": "0.0.0",
       "dependencies": {
         "@google/genai": "^1.0.0",
@@ -85,7 +85,7 @@
       },
     },
     "packages/db": {
-      "name": "@deepvue/db",
+      "name": "@credora/db",
       "version": "0.0.0",
       "dependencies": {
         "@prisma/adapter-pg": "^7.10.0",
@@ -96,10 +96,10 @@
       },
     },
     "packages/platform": {
-      "name": "@deepvue/platform",
+      "name": "@credora/platform",
       "version": "0.0.0",
       "dependencies": {
-        "@deepvue/db": "workspace:*",
+        "@credora/db": "workspace:*",
         "pino": "^8.21.0",
       },
     },
@@ -145,11 +145,11 @@
 
     "@babel/types": ["@babel/types@7.29.8", "", { "dependencies": { "@babel/helper-string-parser": "^7.29.7", "@babel/helper-validator-identifier": "^7.29.7" } }, "sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg=="],
 
-    "@deepvue/core": ["@deepvue/core@workspace:packages/core"],
+    "@credora/core": ["@credora/core@workspace:packages/core"],
 
-    "@deepvue/db": ["@deepvue/db@workspace:packages/db"],
+    "@credora/db": ["@credora/db@workspace:packages/db"],
 
-    "@deepvue/platform": ["@deepvue/platform@workspace:packages/platform"],
+    "@credora/platform": ["@credora/platform@workspace:packages/platform"],
 
     "@electric-sql/pglite": ["@electric-sql/pglite@0.4.3", "", {}, "sha512-ichuWTgtd4mOM1G4SpyGJa5trT03lWbMypDV0fUXUCXg5hiHqVAz/bZyV68NqmkLB7WcYmj1RMJVSp8HV/v/ZQ=="],
 

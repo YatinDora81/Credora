@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
 
-const LOCAL_DATABASE_URL = "postgresql://deepvue:deepvue@localhost:5432/deepvue";
+const LOCAL_DATABASE_URL = "postgresql://credora:credora@localhost:5432/credora";
 
 function resolveDatabaseUrl(): string {
   const raw = process.env.DATABASE_URL;
@@ -12,14 +12,14 @@ function resolveDatabaseUrl(): string {
 export const DATABASE_URL = resolveDatabaseUrl();
 process.env.DATABASE_URL = DATABASE_URL;
 
-const db = await import("@deepvue/db");
+const db = await import("@credora/db");
 export const prisma = db.prisma;
 
 export const REPO_ROOT = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 
-export const KAVERI_KEY = "dv_live_kaveri_7f3a9c2e";
-export const NEXA_KEY = "dv_live_nexa_4b8d1e6a";
-export const ADMIN_KEY = "dv_admin_local_only_change_me";
+export const KAVERI_KEY = "cr_live_kaveri_7f3a9c2e";
+export const NEXA_KEY = "cr_live_nexa_4b8d1e6a";
+export const ADMIN_KEY = "cr_admin_local_only_change_me";
 
 export const KAVERI_CUSTOMER_ID = "kaveri";
 export const NEXA_CUSTOMER_ID = "nexa";
@@ -33,7 +33,7 @@ export const CONFIG_SETTLE_MS = 2_600;
 
 export const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-const core = await import("@deepvue/core");
+const core = await import("@credora/core");
 
 export type SampleKey = "A.1" | "A.2.1" | "A.2.2" | "A.2.3" | "A.2.4";
 

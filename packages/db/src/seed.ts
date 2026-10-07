@@ -4,7 +4,7 @@ const CUSTOMERS = [
   {
     id: "kaveri",
     name: "Kaveri Capital",
-    apiKey: "dv_live_kaveri_7f3a9c2e",
+    apiKey: "cr_live_kaveri_7f3a9c2e",
     policyCustomerKey: "kaveri_capital",
     activeVersionEnv: "KAVERI_ACTIVE_POLICY_VERSION",
     fallbackVersion: "3.1",
@@ -12,7 +12,7 @@ const CUSTOMERS = [
   {
     id: "nexa",
     name: "Nexa Finserv",
-    apiKey: "dv_live_nexa_4b8d1e6a",
+    apiKey: "cr_live_nexa_4b8d1e6a",
     policyCustomerKey: "nexa_finserv",
     activeVersionEnv: "NEXA_ACTIVE_POLICY_VERSION",
     fallbackVersion: "1.4",
@@ -20,7 +20,7 @@ const CUSTOMERS = [
   {
     id: "tapti",
     name: "Tapti Tradefin",
-    apiKey: "dv_live_tapti_28145a1a",
+    apiKey: "cr_live_tapti_28145a1a",
     policyCustomerKey: "tapti_tradefin",
     activeVersionEnv: "TAPTI_ACTIVE_POLICY_VERSION",
     fallbackVersion: "2.0",
@@ -28,7 +28,7 @@ const CUSTOMERS = [
   {
     id: "palar",
     name: "Palar MSME Finance",
-    apiKey: "dv_live_palar_7ec8a7b6",
+    apiKey: "cr_live_palar_7ec8a7b6",
     policyCustomerKey: "palar_msme",
     activeVersionEnv: "PALAR_ACTIVE_POLICY_VERSION",
     fallbackVersion: "1.1",
@@ -36,7 +36,7 @@ const CUSTOMERS = [
   {
     id: "vamsadhara",
     name: "Vamsadhara Co-operative Credit",
-    apiKey: "dv_live_vamsadhara_d8c06574",
+    apiKey: "cr_live_vamsadhara_d8c06574",
     policyCustomerKey: "vamsadhara_coop",
     activeVersionEnv: "VAMSADHARA_ACTIVE_POLICY_VERSION",
     fallbackVersion: "1.0",

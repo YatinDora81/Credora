@@ -1,5 +1,5 @@
-import { runtimeConfigRepository } from "@deepvue/db";
-import { OVERRIDABLE_KEYS, config, logger } from "@deepvue/platform";
+import { runtimeConfigRepository } from "@credora/db";
+import { OVERRIDABLE_KEYS, config, logger } from "@credora/platform";
 
 export type EffectiveConfig = Record<string, { value: string | null; source: string }>;
 

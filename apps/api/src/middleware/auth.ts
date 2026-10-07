@@ -1,7 +1,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
-import type { Customer } from "@deepvue/db";
-import { customerRepository } from "@deepvue/db";
-import { logger } from "@deepvue/platform";
+import type { Customer } from "@credora/db";
+import { customerRepository } from "@credora/db";
+import { logger } from "@credora/platform";
 
 declare global {
   namespace Express {

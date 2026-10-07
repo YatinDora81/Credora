@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
-import { logger, setContext } from "@deepvue/platform";
+import { logger, setContext } from "@credora/platform";
 import { authMiddleware } from "../middleware/auth";
 import { applicationService } from "../services/application.service";
 import {

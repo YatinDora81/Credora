@@ -57,9 +57,9 @@ describe("GET /v1/policies", () => {
 
   it("serves every seeded customer", async () => {
     const expected: Record<string, [string, string]> = {
-      dv_live_tapti_28145a1a: ["tapti_tradefin", "2.0"],
-      dv_live_palar_7ec8a7b6: ["palar_msme", "1.1"],
-      dv_live_vamsadhara_d8c06574: ["vamsadhara_coop", "1.0"],
+      cr_live_tapti_28145a1a: ["tapti_tradefin", "2.0"],
+      cr_live_palar_7ec8a7b6: ["palar_msme", "1.1"],
+      cr_live_vamsadhara_d8c06574: ["vamsadhara_coop", "1.0"],
     };
     for (const [key, [policyKey, version]] of Object.entries(expected)) {
       const res = await policies(key);

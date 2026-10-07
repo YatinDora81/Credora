@@ -1,4 +1,4 @@
-import { runtimeConfigRepository } from "@deepvue/db";
+import { runtimeConfigRepository } from "@credora/db";
 import { logger } from "./logger";
 
 export const OVERRIDABLE_KEYS = [
@@ -16,7 +16,7 @@ export type ConfigSource = "db" | "env" | "default" | "unset";
 
 export const DEFAULTS: Record<string, string> = {
   PORT: "3000",
-  ADMIN_KEY: "dv_admin_local_only_change_me",
+  ADMIN_KEY: "cr_admin_local_only_change_me",
   CORS_ORIGINS: "http://localhost:5173",
 
   WORKER_POLL_INTERVAL_MS: "1000",

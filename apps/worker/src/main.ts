@@ -1,5 +1,5 @@
-import { prisma } from "@deepvue/db";
-import { errorText, logger } from "@deepvue/platform";
+import { prisma } from "@credora/db";
+import { errorText, logger } from "@credora/platform";
 import { healthService } from "./services/health.service";
 import { workerService } from "./services/worker.service";
 

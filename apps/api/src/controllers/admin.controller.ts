@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { OVERRIDABLE_KEYS } from "@deepvue/platform";
+import { OVERRIDABLE_KEYS } from "@credora/platform";
 import { adminService } from "../services/admin.service";
 import { parseJsonBody } from "./application.controller";
 

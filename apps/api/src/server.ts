@@ -1,8 +1,8 @@
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
-import { prisma } from "@deepvue/db";
-import { validateAllPolicies } from "@deepvue/core";
-import { config, logger } from "@deepvue/platform";
+import { prisma } from "@credora/db";
+import { validateAllPolicies } from "@credora/core";
+import { config, logger } from "@credora/platform";
 import { routePath } from "./middleware/auth";
 import { corsMiddleware } from "./middleware/cors";
 import { requestContextMiddleware } from "./middleware/request-context";

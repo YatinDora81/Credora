@@ -1,5 +1,5 @@
-import type { Application, ApplicationStatus, UpstreamCall } from "@deepvue/db";
-import type { ClauseResult, Concern, Policy } from "@deepvue/core";
+import type { Application, ApplicationStatus, UpstreamCall } from "@credora/db";
+import type { ClauseResult, Concern, Policy } from "@credora/core";
 
 export type ApiStatus = "PROCESSING" | "APPROVED" | "REVIEW" | "REJECTED" | "FAILED";
 

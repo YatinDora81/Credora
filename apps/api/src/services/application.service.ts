@@ -1,9 +1,9 @@
-import type { Application, ApplicationStatus, Customer } from "@deepvue/db";
-import { applicationRepository } from "@deepvue/db";
-import type { ApplicationWithCalls } from "@deepvue/db";
-import { loadPolicy, policyExists } from "@deepvue/core";
-import type { Policy } from "@deepvue/core";
-import { config, logger, setContext } from "@deepvue/platform";
+import type { Application, ApplicationStatus, Customer } from "@credora/db";
+import { applicationRepository } from "@credora/db";
+import type { ApplicationWithCalls } from "@credora/db";
+import { loadPolicy, policyExists } from "@credora/core";
+import type { Policy } from "@credora/core";
+import { config, logger, setContext } from "@credora/platform";
 import { idempotencyService } from "./idempotency.service";
 
 const DEFAULT_DEADLINE_MS = 60_000;

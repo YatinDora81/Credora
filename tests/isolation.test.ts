@@ -123,11 +123,11 @@ describe("tenant isolation (§22)", () => {
   }, 30_000);
 
   it("rejects an unknown API key with 401 invalid_api_key", async () => {
-    const res = await h.get(kaveriIds[0], "dv_live_not_a_real_key");
+    const res = await h.get(kaveriIds[0], "cr_live_not_a_real_key");
     expect(res.status).toBe(401);
     expect(res.body?.error).toBe("invalid_api_key");
 
-    const listed = await h.list("dv_live_not_a_real_key");
+    const listed = await h.list("cr_live_not_a_real_key");
     expect(listed.status).toBe(401);
     expect(listed.body?.error).toBe("invalid_api_key");
   }, 30_000);

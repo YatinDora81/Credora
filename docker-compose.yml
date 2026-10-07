@@ -2,12 +2,12 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: deepvue
-      POSTGRES_PASSWORD: deepvue
-      POSTGRES_DB: deepvue
+      POSTGRES_USER: credora
+      POSTGRES_PASSWORD: credora
+      POSTGRES_DB: credora
     ports: ["5432:5432"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U deepvue -d deepvue"]
+      test: ["CMD-SHELL", "pg_isready -U credora -d credora"]
       interval: 5s
       timeout: 5s
       retries: 10

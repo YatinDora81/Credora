@@ -1,4 +1,4 @@
-import { config, errorText, logger } from "@deepvue/platform";
+import { config, errorText, logger } from "@credora/platform";
 import { workerService } from "./worker.service";
 
 const DEFAULT_PORT = 4100;

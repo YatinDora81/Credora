@@ -1,4 +1,4 @@
-import { extractionCacheRepository } from "@deepvue/db";
+import { extractionCacheRepository } from "@credora/db";
 import {
   ExtractionSchema,
   GEMINI_EXTRACTION_SCHEMA,
@@ -7,7 +7,7 @@ import {
   detectInstructionAttempt,
   sha256Hex,
   verifyGrounding,
-} from "@deepvue/core";
+} from "@credora/core";
 import type {
   Concern,
   Extraction,
@@ -17,9 +17,9 @@ import type {
   ExtractionUnavailableReason,
   QuoteSource,
   UngroundedFieldView,
-} from "@deepvue/core";
+} from "@credora/core";
 import { GoogleGenAI } from "@google/genai";
-import { config, logger } from "@deepvue/platform";
+import { config, logger } from "@credora/platform";
 import { geminiKeys, safeErrorText } from "./gemini-keys";
 import { rateLimiterService } from "./rate-limiter.service";
 

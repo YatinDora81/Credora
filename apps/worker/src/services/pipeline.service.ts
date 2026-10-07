@@ -1,6 +1,6 @@
-import { Prisma } from "@deepvue/db";
-import type { Application } from "@deepvue/db";
-import { applicationRepository } from "@deepvue/db";
+import { Prisma } from "@credora/db";
+import type { Application } from "@credora/db";
+import { applicationRepository } from "@credora/db";
 import {
   aggregate,
   buildEvidence,
@@ -8,7 +8,7 @@ import {
   evidenceHash,
   loadPolicy,
   policyHash,
-} from "@deepvue/core";
+} from "@credora/core";
 import type {
   ApplicationPayload,
   ClauseResult,
@@ -16,8 +16,8 @@ import type {
   Evidence,
   ExtractionEnvelope,
   UpstreamResult,
-} from "@deepvue/core";
-import { config, logger, maskedError, newRequestId, withContext } from "@deepvue/platform";
+} from "@credora/core";
+import { config, logger, maskedError, newRequestId, withContext } from "@credora/platform";
 import { upstreamService } from "./upstream.service";
 import { extractionService } from "./extraction.service";
 

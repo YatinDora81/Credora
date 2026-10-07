@@ -1,5 +1,5 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
-import { config, logger } from "@deepvue/platform";
+import { config, logger } from "@credora/platform";
 import { routePath } from "./auth";
 
 function secureEquals(a: string, b: string): boolean {

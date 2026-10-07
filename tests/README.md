@@ -34,16 +34,16 @@ Prerequisites:
 
 ```bash
 # all of them
-DATABASE_URL='postgresql://deepvue:deepvue@localhost:5432/deepvue' bun test tests
+DATABASE_URL='postgresql://credora:credora@localhost:5432/credora' bun test tests
 
 # one suite
-DATABASE_URL='postgresql://deepvue:deepvue@localhost:5432/deepvue' bun test tests/idempotency.test.ts
+DATABASE_URL='postgresql://credora:credora@localhost:5432/credora' bun test tests/idempotency.test.ts
 
 # with the child processes' logs echoed to your terminal
 TEST_VERBOSE=1 DATABASE_URL='...' bun test tests
 ```
 
-`DATABASE_URL` defaults to `postgresql://deepvue:deepvue@localhost:5432/deepvue`. The
+`DATABASE_URL` defaults to `postgresql://credora:credora@localhost:5432/credora`. The
 committed `.env` points at the docker-compose service host (`postgres:5432`), which does not
 resolve from a host-side run, so the harness rewrites that one value and leaves every other
 URL alone.

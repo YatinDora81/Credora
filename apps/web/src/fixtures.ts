@@ -1,4 +1,4 @@
-import { SAMPLES, type SampleKey } from "@deepvue/core/fixtures";
+import { SAMPLES, type SampleKey } from "@credora/core/fixtures";
 
 export type { SampleKey };
 
@@ -17,7 +17,7 @@ export const CUSTOMERS: Customer[] = [
   {
     id: "kaveri",
     name: "Kaveri Capital",
-    apiKey: "dv_live_kaveri_7f3a9c2e",
+    apiKey: "cr_live_kaveri_7f3a9c2e",
     policyKey: "kaveri_capital",
     versions: ["3.1", "3.2"],
     posture: "Conservative · 36 months minimum on 3.1, 24 on 3.2 · excludes crypto",
@@ -25,7 +25,7 @@ export const CUSTOMERS: Customer[] = [
   {
     id: "nexa",
     name: "Nexa Finserv",
-    apiKey: "dv_live_nexa_4b8d1e6a",
+    apiKey: "cr_live_nexa_4b8d1e6a",
     policyKey: "nexa_finserv",
     versions: ["1.4"],
     posture: "Growth lender · 12 months minimum · decides on what is available",
@@ -33,7 +33,7 @@ export const CUSTOMERS: Customer[] = [
   {
     id: "tapti",
     name: "Tapti Tradefin",
-    apiKey: "dv_live_tapti_28145a1a",
+    apiKey: "cr_live_tapti_28145a1a",
     policyKey: "tapti_tradefin",
     versions: ["2.0"],
     posture: "Strict trade lender · 24 months minimum · filed within 60 days · no undisclosed units",
@@ -41,7 +41,7 @@ export const CUSTOMERS: Customer[] = [
   {
     id: "palar",
     name: "Palar MSME Finance",
-    apiKey: "dv_live_palar_7ec8a7b6",
+    apiKey: "cr_live_palar_7ec8a7b6",
     policyKey: "palar_msme",
     versions: ["1.1"],
     posture: "Inclusive MSME lender · 6 months minimum · 60% overstatement allowed under 36 months",
@@ -49,7 +49,7 @@ export const CUSTOMERS: Customer[] = [
   {
     id: "vamsadhara",
     name: "Vamsadhara Co-operative Credit",
-    apiKey: "dv_live_vamsadhara_d8c06574",
+    apiKey: "cr_live_vamsadhara_d8c06574",
     policyKey: "vamsadhara_coop",
     versions: ["1.0"],
     posture: "Member cooperative · exceptions go to the loan committee · rejects only excluded sectors",
